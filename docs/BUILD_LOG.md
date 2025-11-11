@@ -1,6 +1,32 @@
 # Build Log
 
-This document lists all generated commands and files for Stage 0.
+This document lists all generated commands and files.
+
+## Stage 1 Changes
+
+### Files Created
+- `docs/API.md` - API endpoint documentation table
+- `docs/openapi/api.yaml` - OpenAPI 3.0.3 specification for API service
+- `docs/openapi/rag.yaml` - OpenAPI 3.0.3 specification for RAG service
+- `frontend/src/types/example-usage.ts` - Type compilation verification
+
+### Files Modified
+- `frontend/package.json` - Added `openapi-typescript` devDependency and type generation scripts
+- `.github/workflows/ci.yml` - Added type generation and validation steps
+
+### Commands Added (Frontend)
+- `npm run gen:types:api` - Generate TypeScript types from API OpenAPI spec
+- `npm run gen:types:rag` - Generate TypeScript types from RAG OpenAPI spec
+- `npm run gen:types` - Generate all types
+
+### CI Changes
+- Frontend job now includes:
+  1. Install dependencies
+  2. Generate types (`npm run gen:types`)
+  3. Type check (`tsc --noEmit`)
+  4. Build
+
+## Stage 0 Files
 
 ## Generated Files
 

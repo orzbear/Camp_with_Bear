@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "@redocly/cli": "^2.11.1",
+    "swagger-cli": "^4.0.4"
+  }
+}

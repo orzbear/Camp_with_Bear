@@ -1,0 +1,200 @@
+openapi: 3.0.3
+info:
+  title: TrailWise RAG Service
+  version: 0.1.0
+  description: TrailWise RAG service API specification
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /ingest/url:
+    post:
+      summary: Ingest URL content
+      tags:
+        - Ingest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestUrlRequest'
+      responses:
+        '202':
+          description: URL ingestion accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestUrlResponse'
+        '400':
+          description: Bad request
+
+  /search:
+    post:
+      summary: Search documents
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Bad request
+
+  /answer:
+    post:
+      summary: Get AI answer
+      tags:
+        - Answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+      responses:
+        '200':
+          description: AI answer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerResponse'
+        '400':
+          description: Bad request
+
+  /answer/stream:
+    post:
+      summary: Stream AI answer
+      tags:
+        - Answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+      responses:
+        '200':
+          description: Streamed answer
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    IngestUrlRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+
+    IngestUrlResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+        topK:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+
+    SearchResult:
+      type: object
+      properties:
+        text:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+        score:
+          type: number
+          format: float
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+
+    AnswerRequest:
+      type: object
+      required:
+        - question
+      properties:
+        question:
+          type: string
+        tripContext:
+          type: object
+        weather:
+          type: object
+
+    Citation:
+      type: object
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+        score:
+          type: number
+          format: float
+
+    AnswerResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+
+    HealthResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        service:
+          type: string
+        version:
+          type: string
+
