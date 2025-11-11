@@ -1,0 +1,14 @@
+[project]
+name = "trailwise-rag"
+version = "0.0.1"
+description = "TrailWise RAG service"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+

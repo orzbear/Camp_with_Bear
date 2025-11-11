@@ -1,0 +1,66 @@
+# Build Log
+
+This document lists all generated commands and files for Stage 0.
+
+## Generated Files
+
+### Frontend (`frontend/`)
+- `package.json` - Dependencies and scripts
+- `tsconfig.json` - TypeScript configuration
+- `tsconfig.node.json` - Node-specific TypeScript config
+- `vite.config.ts` - Vite configuration
+- `index.html` - HTML entry point
+- `tailwind.config.ts` - Tailwind CSS configuration
+- `postcss.config.js` - PostCSS configuration
+- `src/main.tsx` - React entry point
+- `src/App.tsx` - Main App component
+- `src/index.css` - Global styles with Tailwind
+
+### API (`api/`)
+- `package.json` - Dependencies and scripts
+- `tsconfig.json` - TypeScript configuration
+- `src/index.ts` - Express server entry point
+- `src/routes/health.ts` - Health check route
+- `.eslintrc.cjs` - ESLint configuration
+
+### RAG (`rag/`)
+- `pyproject.toml` - Python project configuration
+- `requirements.txt` - Python dependencies
+- `app.py` - FastAPI application
+- `__init__.py` - Python package marker
+
+### Docker (`docker/`)
+- `frontend/Dockerfile` - Frontend container definition
+- `api/Dockerfile` - API container definition
+- `rag/Dockerfile` - RAG container definition
+- `docker-compose.yml` - Multi-service orchestration
+
+### Documentation (`docs/`)
+- `CHANGELOG.md` - Version history
+- `BUILD_LOG.md` - This file
+- `RUNBOOK.md` - Operations guide
+- `ADRs/0001-monorepo.md` - Architecture decision record
+
+### CI (`.github/workflows/`)
+- `ci.yml` - Continuous integration workflow
+
+## Commands Generated
+
+### Frontend
+- `npm run dev` - Start development server (port 3000)
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run typecheck` - Type check without emitting
+
+### API
+- `npm run dev` - Start development server with hot reload (port 8080)
+- `npm run build` - Compile TypeScript
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run typecheck` - Type check without emitting
+- `npm test` - Placeholder test command
+
+### RAG
+- `uvicorn app:app --host 0.0.0.0 --port 8000` - Start FastAPI server
+
