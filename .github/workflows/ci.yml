@@ -18,6 +18,14 @@ jobs:
         run: |
           cd frontend
           npm ci
+      - name: Generate types
+        run: |
+          cd frontend
+          npm run gen:types
+      - name: Type check
+        run: |
+          cd frontend
+          tsc --noEmit
       - name: Build
         run: |
           cd frontend
