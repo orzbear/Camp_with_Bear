@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4] - Stage 3 Frontend Auth (Login/Register/Dashboard)
+
+### Added
+- Frontend authentication with React Context API
+- Login page with email/password form
+- Register page with email/password form
+- Dashboard page showing current user and logout
+- Protected route component with authentication check
+- API client with typed functions for login, register, and me endpoints
+- Token persistence in localStorage (key: `tw_token`)
+- Automatic user fetch on app mount if token exists
+- React Router setup with routes: `/login`, `/register`, `/dashboard`
+- CORS configuration for frontend origin (http://localhost:5173)
+- Tailwind CSS styling for forms and UI components
+
+### Files Created
+- `frontend/.env.local` - Environment variable for API base URL
+- `frontend/src/vite-env.d.ts` - Vite TypeScript environment types
+- `frontend/src/api/client.ts` - API client with typed HTTP wrapper
+- `frontend/src/auth/AuthContext.tsx` - React context for authentication state
+- `frontend/src/auth/ProtectedRoute.tsx` - Route protection component
+- `frontend/src/pages/Login.tsx` - Login page component
+- `frontend/src/pages/Register.tsx` - Registration page component
+- `frontend/src/pages/Dashboard.tsx` - Dashboard page component
+
+### Files Modified
+- `frontend/package.json` - Added `react-router-dom` dependency
+- `frontend/src/App.tsx` - Added routing with AuthProvider and protected routes
+- `frontend/src/auth/AuthContext.tsx` - Added null check for optional accessToken
+- `api/src/index.ts` - Updated CORS configuration for frontend origin
+
+### Features
+- User registration with automatic login after success
+- User login with token storage
+- Protected dashboard route requiring authentication
+- Loading states during authentication
+- Error handling with inline error messages
+- Responsive UI with Tailwind CSS
+- Form validation (email format, password length)
+
+### Fixed
+- TypeScript build errors in Docker: Added `vite-env.d.ts` for Vite `import.meta.env` types
+- Type safety: Added null check for optional `accessToken` in login response
+- Build process: Fixed TypeScript compilation errors that prevented Docker builds
+
+### Verified
+- User registration, login, and logout
+- JWT persisted in localStorage
+- Protected routes redirect unauthenticated users
+
 ## [0.0.3] - Stage 2 Auth + MongoDB Wiring
 
 ### Added
