@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.3] - Stage 2 Auth + MongoDB Wiring
+
+### Added
+- MongoDB integration with Mongoose
+- User model with email (unique, lowercase) and passwordHash
+- JWT-based authentication (HS256, 7-day expiration)
+- Auth routes: POST `/auth/register`, POST `/auth/login`
+- Protected route: GET `/me` (requires JWT)
+- Auth middleware for JWT verification
+- Environment configuration with fail-fast validation
+- MongoDB connection with retry/backoff logic
+- Security middleware: Helmet, CORS, Morgan
+- Docker Compose MongoDB service (mongo:6)
+- `.env.example` for environment variables
+- ADR 0003: JWT vs Session-based authentication
+
+### Dependencies Added
+- `mongoose` - MongoDB ODM
+- `zod` - Schema validation
+- `bcryptjs` - Password hashing
+- `jsonwebtoken` - JWT generation/verification
+- `cors` - CORS middleware
+- `helmet` - Security headers
+- `morgan` - HTTP request logging
+- `dotenv` - Environment variable management
+
+### Files Created
+- `api/src/config/env.ts` - Environment variable configuration
+- `api/src/config/db.ts` - MongoDB connection logic
+- `api/src/models/User.ts` - User Mongoose model
+- `api/src/routes/auth.ts` - Authentication routes
+- `api/src/middleware/auth.ts` - JWT authentication middleware
+- `api/src/routes/me.ts` - Protected user info route
+- `docs/ADRs/0003-auth-jwt-vs-session.md` - Authentication ADR
+
+### Files Modified
+- `api/package.json` - Added dependencies and devDependencies
+- `api/src/index.ts` - Integrated MongoDB, auth routes, and security middleware
+- `docker/docker-compose.yml` - Added MongoDB service
+- `docs/API.md` - Added auth endpoint examples
+- `.env.example` - Environment variable template
+
 ## [0.0.2] - Stage 1 API Contracts & Types
 
 ### Added
