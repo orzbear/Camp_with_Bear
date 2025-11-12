@@ -2,6 +2,44 @@
 
 This document lists all generated commands and files.
 
+## Stage 2 Changes
+
+### Files Created
+- `api/src/config/env.ts` - Environment variable configuration with validation
+- `api/src/config/db.ts` - MongoDB connection with retry/backoff
+- `api/src/models/User.ts` - User Mongoose schema and model
+- `api/src/routes/auth.ts` - Registration and login routes with Zod validation
+- `api/src/middleware/auth.ts` - JWT authentication middleware
+- `api/src/routes/me.ts` - Protected route to get current user
+- `docs/ADRs/0003-auth-jwt-vs-session.md` - Authentication decision record
+- `.env.example` - Environment variable template
+
+### Files Modified
+- `api/package.json` - Added dependencies (mongoose, zod, bcryptjs, jsonwebtoken, cors, helmet, morgan, dotenv) and devDependencies (@types/bcryptjs, @types/jsonwebtoken, @types/morgan)
+- `api/src/index.ts` - Integrated MongoDB connection, security middleware, and auth routes
+- `docker/docker-compose.yml` - Added MongoDB service (mongo:6) with named volume
+- `docs/API.md` - Added request/response examples for auth endpoints
+- `docs/CHANGELOG.md` - Added Stage 2 entry
+
+### Commands
+- `npm run dev` - Start API with MongoDB connection (requires MONGO_URI and JWT_SECRET)
+- `npm run build` - Build TypeScript (unchanged)
+- `npm run start` - Start production server (unchanged)
+
+### Environment Variables Required
+- `MONGO_URI` - MongoDB connection string (required)
+- `JWT_SECRET` - Secret for JWT signing (required)
+- `PORT` - Server port (default: 8080)
+- `NODE_ENV` - Environment (default: development)
+
+### Docker Compose
+- MongoDB service added: `mongo:6` on port 27017
+- Named volume: `mongo_data` for data persistence
+- API service updated with MongoDB connection string and JWT secret
+
+### Manual Testing
+See curl examples in `api/src/routes/auth.ts` comments for testing register, login, and /me endpoints.
+
 ## Stage 1 Changes
 
 ### Files Created
