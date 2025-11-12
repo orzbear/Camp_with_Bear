@@ -2,6 +2,53 @@
 
 This document lists all generated commands and files.
 
+## Stage 3 Changes
+
+### Files Created
+- `frontend/.env.local` - Environment variable: `VITE_API_BASE=http://localhost:8080`
+- `frontend/src/api/client.ts` - API client with `login()`, `register()`, and `me()` functions
+- `frontend/src/auth/AuthContext.tsx` - React context provider for authentication state
+- `frontend/src/auth/ProtectedRoute.tsx` - Component to protect routes requiring authentication
+- `frontend/src/pages/Login.tsx` - Login page with email/password form
+- `frontend/src/pages/Register.tsx` - Registration page with email/password form
+- `frontend/src/pages/Dashboard.tsx` - Dashboard showing user email and logout button
+
+### Files Modified
+- `frontend/package.json` - Added `react-router-dom@^6.21.1` dependency
+- `frontend/src/App.tsx` - Replaced static content with React Router setup and AuthProvider
+- `api/src/index.ts` - Updated CORS to allow `http://localhost:5173` origin
+
+### Commands
+- `npm run dev` - Start frontend dev server (Vite on port 5173)
+- `npm run build` - Build frontend for production (unchanged)
+- `npm run typecheck` - Type check frontend (unchanged)
+
+### Environment Variables
+- `VITE_API_BASE` - API base URL (default: http://localhost:8080)
+
+### Features Implemented
+- **Authentication Flow:**
+  1. User registers → token stored in localStorage
+  2. User logs in → token stored in localStorage
+  3. On app mount → if token exists, fetch user info
+  4. Protected routes → redirect to /login if no token
+  5. Logout → clear token and redirect to /login
+
+- **UI Components:**
+  - Centered card layout with Tailwind CSS
+  - Form inputs with focus rings
+  - Loading states during API calls
+  - Inline error messages for API failures
+  - Navigation links between login/register
+
+### Testing
+1. Start API: `cd api && npm run dev` (requires MongoDB)
+2. Start Frontend: `cd frontend && npm run dev`
+3. Navigate to http://localhost:5173
+4. Register a new user or login
+5. Access dashboard (protected route)
+6. Test logout functionality
+
 ## Stage 2 Changes
 
 ### Files Created

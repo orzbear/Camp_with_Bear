@@ -11,9 +11,19 @@ import meRouter from './routes/me.js';
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:5173",  
+  "http://localhost:3000",  
+  "http://localhost:3001"   
+];
+
+
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: false,
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 
