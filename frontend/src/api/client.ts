@@ -49,3 +49,64 @@ export async function me(token: string): Promise<{ userId: string; email: string
   });
 }
 
+type CreateTripRequest = ApiPaths['/trips']['post']['requestBody']['content']['application/json'];
+type CreateTripResponse = ApiPaths['/trips']['post']['responses']['201']['content']['application/json'];
+type Trip = ApiPaths['/trips']['get']['responses']['200']['content']['application/json'][number];
+type WeatherResponse = ApiPaths['/weather']['get']['responses']['200']['content']['application/json'];
+type ChecklistResponse = ApiPaths['/checklist/{tripId}']['get']['responses']['200']['content']['application/json'];
+
+export async function createTrip(token: string, body: CreateTripRequest): Promise<CreateTripResponse> {
+  return http<CreateTripResponse>('/trips', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function listTrips(token: string): Promise<Trip[]> {
+  return http<Trip[]>('/trips', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function deleteTrip(token: string, id: string): Promise<void> {
+  await http(`/trips/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function getWeather(
+  token: string,
+  params: { lat: number; lon: number; from: string; to: string }
+): Promise<WeatherResponse> {
+  const queryParams = new URLSearchParams({
+    lat: params.lat.toString(),
+    lon: params.lon.toString(),
+    from: params.from,
+    to: params.to,
+  });
+  return http<WeatherResponse>(`/weather?${queryParams}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function getChecklist(token: string, tripId: string): Promise<ChecklistResponse> {
+  return http<ChecklistResponse>(`/checklist/${tripId}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+

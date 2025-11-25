@@ -4,6 +4,7 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ .
+COPY docs/ /docs/
 RUN npm run build
 
 # Serve stage

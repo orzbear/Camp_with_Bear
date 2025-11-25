@@ -2,6 +2,84 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.5] - Stage 4 Trips + Weather + Checklist
+
+### Added
+- Trip CRUD operations (Create, Read, Delete) with JWT authentication
+- Trip model with location, dates, group size, experience level, and activities
+- Weather integration with OpenWeather 2.5 Forecast API (5-day / 3-hour forecast)
+- Frontend trip management UI with create form and trips list
+- Weather preview functionality for trips
+- **Trip Checklist Generation** - Rule-based packing checklist generation
+  - GET `/checklist/{tripId}` endpoint with JWT authentication
+  - Weather-based item recommendations (rain, cold, hot, windy conditions)
+  - Activity-specific items (hiking, camping, fishing, swimming)
+  - Experience-level adjustments (beginner safety items, expert gear)
+  - Duration and group size considerations
+  - Frontend checklist UI with item details and recommendations
+- OpenAPI specification updates with security schemes (bearerAuth)
+- All trip, weather, and checklist endpoints protected with JWT authentication
+
+### Files Created
+- `api/src/models/Trip.ts` - Trip Mongoose model with location, dates, and metadata
+- `api/src/routes/trips.ts` - Trip CRUD routes (POST, GET list, GET by id, DELETE)
+- `api/src/routes/weather.ts` - Weather route with OpenWeather API integration
+- `api/src/routes/checklist.ts` - Checklist generation route
+- `api/src/services/checklist.ts` - Checklist business logic (classifyWeather, generateChecklist)
+
+### Files Modified
+- `api/src/config/env.ts` - Added OPENWEATHER_API_KEY (required)
+- `api/src/index.ts` - Mounted trips, weather, and checklist routes with auth middleware
+- `docs/openapi/api.yaml` - Added GET /trips, DELETE /trips/{id}, GET /checklist/{tripId}, security schemes, and bearerAuth
+- `frontend/src/api/client.ts` - Added createTrip, listTrips, deleteTrip, getWeather, getChecklist functions
+- `frontend/src/pages/Dashboard.tsx` - Complete trip management UI with form, table, weather preview, and checklist generation
+- `frontend/package.json` - Added `prebuild` script to auto-generate types before build; simplified `gen:types` to only generate API types
+- `api/src/routes/weather.ts` - Switched from One Call 3.0 to 2.5 Forecast API for free tier compatibility
+- `docker/frontend/Dockerfile` - Added COPY command for docs directory to make OpenAPI specs available during build
+
+### Features
+- **Trip Management:**
+  - Create trips with location (name, lat, lon), dates, group size, experience level, activities
+  - List all trips for authenticated user
+  - View individual trip details
+  - Delete trips (with confirmation)
+  - All operations require JWT authentication
+
+- **Weather Integration:**
+  - Fetch weather data for trip location and date range
+  - Uses OpenWeather 2.5 Forecast API (5-day / 3-hour forecast)
+  - Returns normalized JSON with location and forecasts array
+  - Error handling for invalid parameters and API failures
+
+- **Checklist Generation:**
+  - Rule-based packing checklist generation
+  - Weather classification: rain, cold, hot, windy, normal
+  - Activity-specific items (hiking boots, tent, fishing gear, etc.)
+  - Experience-level adjustments (beginner safety items, expert gear)
+  - Duration-based items (extra batteries for long trips)
+  - Group size considerations (group cooking equipment for large groups)
+  - Each item includes name, quantity, reason, and recommended flag
+
+- **Frontend UI:**
+  - Create trip form with all required fields
+  - Responsive trips table with location, dates, group size, experience
+  - Weather button per trip to fetch and display weather data
+  - Checklist button per trip to generate and display packing checklist
+  - Delete button with confirmation dialog
+  - JSON preview for weather data
+  - Formatted checklist display with item details and recommendations
+
+### Dependencies
+- OpenWeather API key required in environment variables
+
+### Build Improvements
+- Added `prebuild` hook to automatically generate TypeScript types from OpenAPI spec before build
+- Simplified `gen:types` script to only generate API types (RAG types can be generated separately if needed)
+
+### Fixed
+- TypeScript build error in weather route: Added type assertion for `weatherData` to fix strict type checking (TS18046)
+- Docker build error in frontend: Updated Dockerfile to copy `docs/` directory so OpenAPI specs are available for type generation during build
+
 ## [0.0.4] - Stage 3 Frontend Auth (Login/Register/Dashboard)
 
 ### Added

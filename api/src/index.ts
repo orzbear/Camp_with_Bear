@@ -5,9 +5,13 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { connectDB } from './config/db.js';
 import { PORT } from './config/env.js';
+import { authMiddleware } from './middleware/auth.js';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
 import meRouter from './routes/me.js';
+import tripsRouter from './routes/trips.js';
+import weatherRouter from './routes/weather.js';
+import checklistRouter from './routes/checklist.js';
 
 const app = express();
 
@@ -31,6 +35,9 @@ app.use(express.json());
 app.use('/health', healthRouter);
 app.use('/auth', authRouter);
 app.use('/me', meRouter);
+app.use('/trips', authMiddleware, tripsRouter);
+app.use('/weather', authMiddleware, weatherRouter);
+app.use('/checklist', authMiddleware, checklistRouter);
 
 // Connect to database and start server
 async function start() {

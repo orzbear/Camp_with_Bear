@@ -8,9 +8,10 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
+    "prebuild": "npm run gen:types",
     "gen:types:api": "openapi-typescript ../docs/openapi/api.yaml -o src/types/api.d.ts",
     "gen:types:rag": "openapi-typescript ../docs/openapi/rag.yaml -o src/types/rag.d.ts",
-    "gen:types": "npm run gen:types:api && npm run gen:types:rag"
+    "gen:types": "openapi-typescript ../docs/openapi/api.yaml -o src/types/api.d.ts"
   },
   "dependencies": {
     "react": "^18.2.0",

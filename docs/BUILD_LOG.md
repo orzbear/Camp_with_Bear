@@ -2,6 +2,103 @@
 
 This document lists all generated commands and files.
 
+## Stage 4 Changes
+
+### Files Created
+- `api/src/models/Trip.ts` - Trip Mongoose model with location, dates, group size, experience, activities
+- `api/src/routes/trips.ts` - Trip CRUD routes with Zod validation and JWT auth
+- `api/src/routes/weather.ts` - Weather route integrating OpenWeather One Call API 3.0
+
+### Files Modified
+- `api/src/config/env.ts` - Added OPENWEATHER_API_KEY (required, fail-fast)
+- `api/src/index.ts` - Mounted `/trips` and `/weather` routes with authMiddleware
+- `docs/openapi/api.yaml` - Added GET /trips, DELETE /trips/{id}, securitySchemes (bearerAuth)
+- `frontend/src/api/client.ts` - Added createTrip, listTrips, deleteTrip, getWeather functions
+- `frontend/src/pages/Dashboard.tsx` - Complete trip management UI with form, table, weather preview
+
+### Commands
+- `npm run dev` - Start API (requires MONGO_URI, JWT_SECRET, OPENWEATHER_API_KEY)
+- `npm run dev` - Start frontend (unchanged)
+
+### Environment Variables Required
+- `OPENWEATHER_API_KEY` - OpenWeather API key (required, fail-fast if missing)
+
+### API Endpoints
+
+#### POST /trips
+**Request:**
+```json
+{
+  "location": { "lat": 37.8651, "lon": -119.5383, "name": "Yosemite" },
+  "startDate": "2024-06-01T00:00:00Z",
+  "endDate": "2024-06-05T00:00:00Z",
+  "groupSize": 4,
+  "experience": "intermediate",
+  "activities": ["hiking", "camping"]
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "507f1f77bcf86cd799439011"
+}
+```
+
+#### GET /trips
+**Response (200):**
+```json
+[
+  {
+    "_id": "507f1f77bcf86cd799439011",
+    "location": { "lat": 37.8651, "lon": -119.5383, "name": "Yosemite" },
+    "startDate": "2024-06-01T00:00:00Z",
+    "endDate": "2024-06-05T00:00:00Z",
+    "groupSize": 4,
+    "experience": "intermediate",
+    "activities": ["hiking", "camping"],
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+#### GET /trips/:id
+**Response (200):** Single trip object (same structure as above)
+
+#### DELETE /trips/:id
+**Response (204):** No content
+
+#### GET /weather?lat=37.8651&lon=-119.5383&from=2024-06-01T00:00:00Z&to=2024-06-05T00:00:00Z
+**Response (200):**
+```json
+{
+  "daily": [...],
+  "alerts": [...]
+}
+```
+
+### Features Implemented
+- **Trip CRUD:**
+  - Create: POST /trips with full trip data
+  - Read: GET /trips (list all for user), GET /trips/:id (single trip)
+  - Delete: DELETE /trips/:id (with ownership check)
+  - All routes protected with JWT authentication
+  - Zod validation for all inputs
+
+- **Weather Integration:**
+  - GET /weather with lat, lon, from, to query parameters
+  - Calls OpenWeather One Call API 3.0
+  - Returns normalized JSON with daily forecast and alerts
+  - Error handling: 400 (bad params), 502 (API error)
+
+- **Frontend UI:**
+  - Create trip form with all fields
+  - Trips table showing location, dates, group size, experience
+  - Weather button to fetch and preview weather data
+  - Delete button with confirmation
+  - Responsive Tailwind CSS styling
+
 ## Stage 3 Changes
 
 ### Files Created
