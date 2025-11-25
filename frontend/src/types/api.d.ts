@@ -50,6 +50,21 @@ export interface paths {
     };
   };
   "/trips": {
+    /** List trips for current user */
+    get: {
+      responses: {
+        /** @description List of trips */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Trip"][];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+      };
+    };
     /** Create new trip */
     post: {
       requestBody: {
@@ -66,6 +81,10 @@ export interface paths {
         };
         /** @description Bad request */
         400: {
+          content: never;
+        };
+        /** @description Unauthorized */
+        401: {
           content: never;
         };
       };
@@ -85,6 +104,32 @@ export interface paths {
           content: {
             "application/json": components["schemas"]["Trip"];
           };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+        /** @description Trip not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /** Delete trip */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Trip deleted */
+        204: {
+          content: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
         };
         /** @description Trip not found */
         404: {
@@ -115,6 +160,14 @@ export interface paths {
         400: {
           content: never;
         };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+        /** @description Weather service error */
+        502: {
+          content: never;
+        };
       };
     };
   };
@@ -133,8 +186,20 @@ export interface paths {
             "application/json": components["schemas"]["ChecklistResponse"];
           };
         };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
         /** @description Trip not found */
         404: {
+          content: never;
+        };
+        /** @description Weather service error */
+        502: {
           content: never;
         };
       };
@@ -238,13 +303,13 @@ export interface components {
       alerts?: Record<string, never>[];
     };
     ChecklistItem: {
-      name?: string;
-      qty?: number;
-      reason?: string;
-      recommended?: boolean;
+      name: string;
+      qty: number;
+      reason: string;
+      recommended: boolean;
     };
     ChecklistResponse: {
-      items?: components["schemas"]["ChecklistItem"][];
+      items: components["schemas"]["ChecklistItem"][];
     };
     AskRequest: {
       question: string;

@@ -56,6 +56,8 @@ paths:
       summary: Create new trip
       tags:
         - Trips
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -71,12 +73,33 @@ paths:
                 $ref: '#/components/schemas/CreateTripResponse'
         '400':
           description: Bad request
+        '401':
+          description: Unauthorized
+    get:
+      summary: List trips for current user
+      tags:
+        - Trips
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trip'
+        '401':
+          description: Unauthorized
 
   /trips/{id}:
     get:
       summary: Get trip details
       tags:
         - Trips
+      security:
+        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -92,12 +115,35 @@ paths:
                 $ref: '#/components/schemas/Trip'
         '404':
           description: Trip not found
+        '401':
+          description: Unauthorized
+    delete:
+      summary: Delete trip
+      tags:
+        - Trips
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Trip deleted
+        '404':
+          description: Trip not found
+        '401':
+          description: Unauthorized
 
   /weather:
     get:
       summary: Get weather data
       tags:
         - Weather
+      security:
+        - bearerAuth: []
       parameters:
         - name: lat
           in: query
@@ -132,12 +178,18 @@ paths:
                 $ref: '#/components/schemas/WeatherResponse'
         '400':
           description: Bad request
+        '401':
+          description: Unauthorized
+        '502':
+          description: Weather service error
 
   /checklist/{tripId}:
     get:
       summary: Get trip checklist
       tags:
         - Checklist
+      security:
+        - bearerAuth: []
       parameters:
         - name: tripId
           in: path
@@ -151,8 +203,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChecklistResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
         '404':
           description: Trip not found
+        '502':
+          description: Weather service error
 
   /ai/ask:
     post:
@@ -320,6 +378,11 @@ components:
 
     ChecklistItem:
       type: object
+      required:
+        - name
+        - qty
+        - reason
+        - recommended
       properties:
         name:
           type: string
@@ -332,6 +395,8 @@ components:
 
     ChecklistResponse:
       type: object
+      required:
+        - items
       properties:
         items:
           type: array
@@ -381,4 +446,10 @@ components:
           type: string
         version:
           type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
