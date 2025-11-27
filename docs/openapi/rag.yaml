@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: TrailWise RAG Service
+  title: CampMate RAG Service
   version: 0.1.0
-  description: TrailWise RAG service API specification
+  description: CampMate RAG service API specification
 
 servers:
   - url: http://localhost:8000

@@ -5,6 +5,7 @@ services:
     build:
       context: ..
       dockerfile: docker/frontend/Dockerfile
+    image: campmate-frontend
     ports:
       - "3000:3000"
     environment:
@@ -14,11 +15,12 @@ services:
     build:
       context: ..
       dockerfile: docker/api/Dockerfile
+    image: campmate-api
     ports:
       - "8080:8080"
     environment:
       - PORT=8080
-      - MONGO_URI=mongodb://mongo:27017/trailwise
+      - MONGO_URI=mongodb://mongo:27017/campmate
       - JWT_SECRET=dev_change_me
       - OPENWEATHER_API_KEY=c5df017a7961da45a250532bba658b24
     depends_on:
@@ -35,6 +37,7 @@ services:
     build:
       context: ..
       dockerfile: docker/rag/Dockerfile
+    image: campmate-rag
     ports:
       - "8000:8000"
     environment:

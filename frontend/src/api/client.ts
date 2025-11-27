@@ -110,3 +110,72 @@ export async function getChecklist(token: string, tripId: string): Promise<Check
   });
 }
 
+// Public campsites API (no auth required)
+export interface Campsite {
+  _id: string;
+  name: string;
+  slug: string;
+  parkName: string;
+  region: string;
+  location: { lat: number; lon: number };
+  latitude: number; // Convenience field for map
+  longitude: number; // Convenience field for map
+  siteType: 'tent' | 'caravan' | 'both';
+  facilities: {
+    hasHotWater: boolean;
+    hasPower: boolean;
+    hasToilets: boolean;
+    hasShowers: boolean;
+    allowsCampfire: boolean;
+    allowsFishing: boolean;
+  };
+  tags?: string[];
+  description?: string;
+  bookingUrl?: string;
+}
+
+export async function getCampsites(params?: { query?: string; type?: string }): Promise<Campsite[]> {
+  const queryParams = new URLSearchParams();
+  if (params?.query) queryParams.set('query', params.query);
+  if (params?.type) queryParams.set('type', params.type);
+  
+  const queryString = queryParams.toString();
+  const campsites = await http<Campsite[]>(`/public/campsites${queryString ? `?${queryString}` : ''}`, {
+    method: 'GET',
+  });
+  
+  // Inject mock coordinates around Sydney if not present
+  // Sydney center: -33.8688, 151.2093
+  const sydneyCenter = { lat: -33.8688, lon: 151.2093 };
+  const offsets = [
+    { lat: 0.05, lon: 0.05 },
+    { lat: -0.05, lon: 0.03 },
+    { lat: 0.03, lon: -0.05 },
+    { lat: -0.03, lon: -0.03 },
+    { lat: 0.08, lon: 0.02 },
+  ];
+  
+  return campsites.map((campsite, index) => {
+    // Use existing location if available, otherwise inject mock coordinates
+    const hasLocation = campsite.location?.lat && campsite.location?.lon;
+    const latitude = hasLocation ? campsite.location.lat : sydneyCenter.lat + (offsets[index % offsets.length]?.lat || 0);
+    const longitude = hasLocation ? campsite.location.lon : sydneyCenter.lon + (offsets[index % offsets.length]?.lon || 0);
+    
+    return {
+      ...campsite,
+      latitude,
+      longitude,
+      location: {
+        lat: latitude,
+        lon: longitude,
+      },
+    };
+  });
+}
+
+export async function getCampsite(id: string): Promise<Campsite> {
+  return http<Campsite>(`/public/campsites/${id}`, {
+    method: 'GET',
+  });
+}
+

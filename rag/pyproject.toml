@@ -1,7 +1,7 @@
 [project]
-name = "trailwise-rag"
+name = "campmate-rag"
 version = "0.0.1"
-description = "TrailWise RAG service"
+description = "CampMate RAG service"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.104.0",

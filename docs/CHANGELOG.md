@@ -2,6 +2,116 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.8] - Navigation Logo Support
+
+### Added
+- **Logo Support in Navigation Bar**:
+  - Added `Logo` component with graceful fallback to text
+  - Logo image loads from `src/assets/logo.png` if available
+  - Falls back to "CampMate" text if logo image is missing or fails to load
+  - Logo is clickable and navigates to home page (`/`)
+  - Proper alt text for accessibility
+  - Responsive sizing with Tailwind (`h-8 w-auto`)
+
+### Files Created
+- `frontend/src/components/Logo.tsx` - Reusable logo component with image/text fallback
+
+### Files Modified
+- `frontend/src/components/NavBar.tsx` - Integrated Logo component replacing text-only branding
+- `frontend/src/vite-env.d.ts` - Added TypeScript declarations for image imports (`.png`, `.svg`, `.jpg`, `.jpeg`, `.gif`, `.webp`)
+
+### Technical Details
+- Logo component handles missing images gracefully with runtime error handling
+- Uses Vite's `import.meta.url` for asset resolution
+- TypeScript types properly configured for image imports
+- Build process handles logo bundling automatically
+
+## [0.0.7] - Map + List Split-View Search
+
+### Added
+- **Interactive Map Integration**: 
+  - Integrated `react-leaflet` for interactive map visualization
+  - Split-view layout: 40% list panel (left) + 60% map panel (right) on desktop
+  - Mobile-responsive with toggle button to switch between list and full-screen map
+  - Custom SVG marker icons color-coded by site type (Blue for Tent, Purple for Caravan, Gray for Both)
+  - CartoDB Voyager tile layer for clean map styling
+- **Map-List Interactivity**:
+  - Clicking a campsite card in the list flies the map to that marker's location
+  - Clicking a map marker selects the corresponding campsite card
+  - Hover effects on list cards for better UX
+  - Selected campsite highlighted in both list and map
+- **Coordinate System**:
+  - Added `latitude` and `longitude` convenience fields to Campsite type
+  - Automatic injection of mock coordinates around Sydney for testing when coordinates not available in DB
+- **UI Improvements**:
+  - More compact campsite cards in list view
+  - Better visual hierarchy and spacing
+  - Sticky filters on desktop, mobile-friendly filter layout
+  - Full-height layout using `calc(100vh - header_height)` to prevent window scrolling
+
+### Files Modified
+- `frontend/src/pages/Search.tsx` - Complete refactor with split-view map + list layout
+- `frontend/src/api/client.ts` - Added latitude/longitude fields and mock coordinate injection
+- `frontend/src/index.css` - Added Leaflet CSS imports
+- `frontend/package.json` - Added `leaflet`, `react-leaflet@^4.2.1`, `@types/leaflet`, and `lucide-react` dependencies
+
+### Technical Details
+- Used react-leaflet v4.2.1 for React 18 compatibility
+- Custom DivIcon markers using inline SVG to avoid image asset loading issues
+- MapController component handles programmatic map navigation using `flyTo` animation
+- Responsive design: mobile shows list by default with floating map toggle button
+
+## [0.0.6] - UI Restructure + Public Campsite Explore
+
+### Added
+- **Top Navigation Bar**: Shared navigation component with app name, main sections (Search Trips, Plan Your Trip, Camp Recipes), and auth-aware user menu
+- **Public Campsite Explore**: 
+  - Campsite Mongoose model with location, facilities, site type, and booking information
+  - Public API endpoints: `GET /public/campsites` (with search and type filters) and `GET /public/campsites/:id`
+  - Automatic seeding of 5 Sydney-area campsites in non-production environments
+- **Public Search Page** (`/`): 
+  - Hero section with heading
+  - Two-column layout with filters (search by name/park, site type) and campsite grid
+  - Clickable campsite cards with detail modal showing facilities, description, and booking link
+  - No authentication required
+- **Plan Your Trip Page** (`/plan`):
+  - Login check with friendly message and login/register buttons for unauthenticated users
+  - Campsite picker dropdown
+  - Trip creation form (dates, group size, experience, activities)
+  - Trip summary, weather forecast, and packing checklist display
+  - Reuses existing trip, weather, and checklist APIs
+- **Camp Recipes Placeholder Page** (`/recipes`): Coming soon page with planned features description
+- **Shared Layout Component**: Wraps all pages with consistent navigation bar
+
+### Files Created
+- `api/src/models/Campsite.ts` - Campsite Mongoose model
+- `api/src/routes/publicCampsites.ts` - Public campsite API routes (no auth required)
+- `api/src/scripts/seedCampsites.ts` - Campsite seeding script with 5 Sydney-area examples
+- `frontend/src/components/NavBar.tsx` - Top navigation bar component
+- `frontend/src/components/Layout.tsx` - Shared layout wrapper
+- `frontend/src/pages/Search.tsx` - Public campsite search page
+- `frontend/src/pages/Plan.tsx` - Trip planning page (replaces dashboard functionality)
+- `frontend/src/pages/Recipes.tsx` - Camp recipes placeholder page
+
+### Files Modified
+- `api/src/index.ts` - Added public campsites route and campsite seeding on startup
+- `frontend/src/App.tsx` - Updated routing structure with new pages
+- `frontend/src/api/client.ts` - Added `getCampsites()` and `getCampsite()` functions
+- `frontend/src/pages/Login.tsx` - Updated to use Layout and redirect to `/plan`
+- `frontend/src/pages/Register.tsx` - Updated to use Layout and redirect to `/plan`
+
+### Features
+- **Public Campsite Search**: Browse and filter campsites without authentication
+- **Integrated Trip Planning**: Select campsite, create trip, and view weather/checklist in one flow
+- **Consistent Navigation**: All pages share the same top navigation bar
+- **Responsive Design**: Mobile-friendly layout with collapsible navigation
+
+### Technical Details
+- Campsite seeding only runs in non-production environments
+- Seeding checks for existing campsites to prevent duplicates
+- Public campsite API supports case-insensitive text search and site type filtering
+- All existing auth, trip, weather, and checklist functionality preserved
+
 ## [0.0.5] - Stage 4 Trips + Weather + Checklist
 
 ### Added

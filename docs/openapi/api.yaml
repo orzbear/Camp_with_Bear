@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: TrailWise API
+  title: CampMate API
   version: 0.1.0
-  description: TrailWise API specification
+  description: CampMate API specification
 
 servers:
   - url: http://localhost:8080
