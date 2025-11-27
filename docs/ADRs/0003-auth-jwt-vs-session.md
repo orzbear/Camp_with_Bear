@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-We need to choose an authentication mechanism for the TrailWise API. The main options are:
+We need to choose an authentication mechanism for the CampMate API. The main options are:
 - JWT (JSON Web Tokens) - stateless tokens
 - Session-based authentication - server-side session storage
 

@@ -1,11 +1,12 @@
-# TrailWise
+# CampMate
 
 A comprehensive camping and outdoor trip planning application with weather integration and intelligent packing checklist generation.
 
 ## Features
 
+- **Public Campsite Explore**: Browse and search campsites around Sydney without authentication
 - **User Authentication**: JWT-based authentication with secure password hashing
-- **Trip Management**: Create, view, and delete camping trips with location, dates, and activity details
+- **Trip Planning**: Create trips by selecting campsites, with integrated weather forecasts and packing checklists
 - **Weather Integration**: Real-time weather forecasts using OpenWeather API
 - **Intelligent Checklists**: Rule-based packing checklist generation based on weather, activities, and trip details
 
@@ -68,23 +69,38 @@ Each checklist item includes:
 - **reason**: Explanation of why this item is included
 - **recommended**: Boolean flag indicating if this is a recommended item (vs. optional)
 
+## Application Routes
+
+### Public Routes (No Authentication Required)
+- `/` - **Search Trips**: Interactive map + list view to browse and search campsites around Sydney with real-time filtering
+- `/recipes` - **Camp Recipes**: Coming soon page for meal planning features
+
+### Auth-Required Routes
+- `/plan` - **Plan Your Trip**: Create trips, view weather forecasts, and generate packing checklists
+- `/login` - User login
+- `/register` - User registration
+
 ## API Endpoints
+
+### Public Endpoints (No Authentication Required)
+- `GET /public/campsites?query={query}&type={type}` - List campsites with optional search and type filters
+- `GET /public/campsites/:id` - Get detailed campsite information
 
 ### Authentication
 - `POST /auth/register` - Register a new user
 - `POST /auth/login` - Login and get JWT token
 
-### Trips
-- `POST /trips` - Create a new trip (requires JWT)
-- `GET /trips` - List all trips for current user (requires JWT)
-- `GET /trips/:id` - Get trip details (requires JWT)
-- `DELETE /trips/:id` - Delete a trip (requires JWT)
+### Trips (Requires JWT)
+- `POST /trips` - Create a new trip
+- `GET /trips` - List all trips for current user
+- `GET /trips/:id` - Get trip details
+- `DELETE /trips/:id` - Delete a trip
 
-### Weather
-- `GET /weather?lat={lat}&lon={lon}&from={from}&to={to}` - Get weather forecast (requires JWT)
+### Weather (Requires JWT)
+- `GET /weather?lat={lat}&lon={lon}&from={from}&to={to}` - Get weather forecast
 
-### Checklist
-- `GET /checklist/:tripId` - Generate packing checklist for a trip (requires JWT)
+### Checklist (Requires JWT)
+- `GET /checklist/:tripId` - Generate packing checklist for a trip
 
 ## Technology Stack
 

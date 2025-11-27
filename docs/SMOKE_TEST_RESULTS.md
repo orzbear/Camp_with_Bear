@@ -210,10 +210,10 @@ Invoke-RestMethod -Uri "http://localhost:8080/trips/6914263a10cc9c6c7c75ece1" `
 1. **Validate OpenWeather Access**
    - Verify the API key in `.env` matches the OpenWeather dashboard.
    - Remember the free 5-day forecast only supports ~120 hours ahead; clamp requests accordingly until a historical plan is available.
-   - Run a direct curl/PowerShell request against `api.openweathermap.org/data/2.5/forecast` with *today’s* dates to ensure the service responds outside of TrailWise.
+   - Run a direct curl/PowerShell request against `api.openweathermap.org/data/2.5/forecast` with *today's* dates to ensure the service responds outside of CampMate.
 
 2. **Inspect API Service Logs**
-   - `docker logs docker-api-1 --tail 200 | Select-String Weather` to capture the proxied error from OpenWeather.
+   - `docker logs campmate-api-1 --tail 200 | Select-String Weather` to capture the proxied error from OpenWeather.
    - If you see repeated 401/429 responses, rotate the key or throttle requests before retrying the smoke test.
 
 3. **Re-run Weather Smoke Test with Known-Good Params**

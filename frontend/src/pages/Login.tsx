@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { Layout } from '../components/Layout';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ export function Login() {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/plan');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -26,8 +27,9 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <Layout>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-16">
+        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h1>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -82,8 +84,9 @@ export function Login() {
             Register
           </Link>
         </p>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

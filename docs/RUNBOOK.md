@@ -1,6 +1,6 @@
 # Runbook
 
-This document describes how to run TrailWise services locally and via Docker.
+This document describes how to run CampMate services locally and via Docker.
 
 ## Prerequisites
 
@@ -62,20 +62,20 @@ This will build and start all three services:
 
 #### Frontend
 ```bash
-docker build -f docker/frontend/Dockerfile -t trailwise-frontend .
-docker run -p 3000:3000 trailwise-frontend
+docker build -f docker/frontend/Dockerfile -t campmate-frontend .
+docker run -p 3000:3000 campmate-frontend
 ```
 
 #### API
 ```bash
-docker build -f docker/api/Dockerfile -t trailwise-api .
-docker run -p 8080:8080 trailwise-api
+docker build -f docker/api/Dockerfile -t campmate-api .
+docker run -p 8080:8080 campmate-api
 ```
 
 #### RAG
 ```bash
-docker build -f docker/rag/Dockerfile -t trailwise-rag .
-docker run -p 8000:8000 trailwise-rag
+docker build -f docker/rag/Dockerfile -t campmate-rag .
+docker run -p 8000:8000 campmate-rag
 ```
 
 ## Environment Variables
@@ -89,7 +89,7 @@ docker run -p 8000:8000 trailwise-rag
 
 ## Health Checks
 
-- Frontend: Visit http://localhost:3000 (should show "TrailWise OK" with version)
+- Frontend: Visit http://localhost:3000 (should show "CampMate OK" with version)
 - API: `curl http://localhost:8080/health`
 - RAG: `curl http://localhost:8000/health`
 
