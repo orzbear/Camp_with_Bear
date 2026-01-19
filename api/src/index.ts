@@ -14,6 +14,8 @@ import tripsRouter from './routes/trips.js';
 import weatherRouter from './routes/weather.js';
 import checklistRouter from './routes/checklist.js';
 import publicCampsitesRouter from './routes/publicCampsites.js';
+import footprintsRouter from './routes/footprints.js';
+import geocodeRouter from './routes/geocode.js';
 
 const app = express();
 
@@ -38,9 +40,11 @@ app.use('/health', healthRouter);
 app.use('/auth', authRouter);
 app.use('/me', meRouter);
 app.use('/public/campsites', publicCampsitesRouter);
+app.use('/geocode', geocodeRouter); // Public geocoding endpoint (no auth required)
 app.use('/trips', authMiddleware, tripsRouter);
 app.use('/weather', authMiddleware, weatherRouter);
 app.use('/checklist', authMiddleware, checklistRouter);
+app.use('/footprints', authMiddleware, footprintsRouter);
 
 // Connect to database and start server
 async function start() {

@@ -8,7 +8,7 @@ export function NavBar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/footprints');
   };
 
   return (
@@ -31,22 +31,22 @@ export function NavBar() {
           {/* Middle: Navigation links */}
           <div className="hidden md:flex space-x-8">
             <Link
-              to="/"
+              to="/footprints"
               className="text-gray-700 hover:text-green-700 px-3 py-2 rounded-md text-xl font-medium transition-colors"
             >
-              Search Trips
+              Footprints
             </Link>
             <Link
               to="/plan"
               className="text-gray-700 hover:text-green-700 px-3 py-2 rounded-md text-xl font-medium transition-colors"
             >
-              Plan Your Trip
+              Plan
             </Link>
             <Link
               to="/recipes"
               className="text-gray-700 hover:text-green-700 px-3 py-2 rounded-md text-xl font-medium transition-colors"
             >
-              Camp Recipes
+              Recipes
             </Link>
           </div>
 
@@ -88,22 +88,22 @@ export function NavBar() {
       <div className="md:hidden border-t border-gray-200">
         <div className="px-2 pt-2 pb-3 space-y-1">
           <Link
-            to="/"
+            to="/footprints"
             className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-gray-50"
           >
-            Search Trips
+            Footprints
           </Link>
           <Link
             to="/plan"
             className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-gray-50"
           >
-            Plan Your Trip
+            Plan
           </Link>
           <Link
             to="/recipes"
             className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-gray-50"
           >
-            Camp Recipes
+            Recipes
           </Link>
         </div>
       </div>
