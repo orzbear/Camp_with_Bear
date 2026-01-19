@@ -110,6 +110,20 @@ export async function getChecklist(token: string, tripId: string): Promise<Check
   });
 }
 
+// Geocoding API (no auth required)
+export interface GeocodeResult {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+export async function geocode(query: string): Promise<GeocodeResult[]> {
+  const queryParams = new URLSearchParams({ q: query });
+  return http<GeocodeResult[]>(`/geocode?${queryParams}`, {
+    method: 'GET',
+  });
+}
+
 // Public campsites API (no auth required)
 export interface Campsite {
   _id: string;
@@ -176,6 +190,89 @@ export async function getCampsites(params?: { query?: string; type?: string }): 
 export async function getCampsite(id: string): Promise<Campsite> {
   return http<Campsite>(`/public/campsites/${id}`, {
     method: 'GET',
+  });
+}
+
+
+// Footprints API (requires authentication)
+export interface Footprint {
+  _id: string;
+  userId: string;
+  title: string;
+  location: {
+    lat: number;
+    lon: number;
+  };
+  startDate: string;
+  endDate: string;
+  notes?: string;
+  rating?: number;
+  tags?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function listFootprints(token: string): Promise<Footprint[]> {
+  return http<Footprint[]>('/footprints', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export interface CreateFootprintRequest {
+  title: string;
+  location: {
+    lat: number;
+    lon: number;
+  };
+  startDate: string;
+  endDate: string;
+  notes?: string;
+  rating?: number;
+  tags?: string[];
+}
+
+export interface UpdateFootprintRequest {
+  title?: string;
+  location?: {
+    lat: number;
+    lon: number;
+  };
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+  rating?: number;
+  tags?: string[];
+}
+
+export async function createFootprint(token: string, body: CreateFootprintRequest): Promise<Footprint> {
+  return http<Footprint>('/footprints', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateFootprint(token: string, id: string, body: UpdateFootprintRequest): Promise<Footprint> {
+  return http<Footprint>(`/footprints/${id}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteFootprint(token: string, id: string): Promise<void> {
+  await http(`/footprints/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 }
 

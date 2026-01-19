@@ -2,6 +2,160 @@
 
 This document lists all generated commands and files.
 
+## Stage E: Merge Explore + Footprints into Unified Experience
+
+### Goal
+Create one unified Footprints experience that adapts based on authentication state:
+- Not logged in → Demo mode (explore demo footprints)
+- Logged in → Authenticated mode (manage real footprints)
+
+### Files Modified
+- `frontend/src/pages/Footprints.tsx` - Unified demo and authenticated modes
+  - Added demo footprint loading when not authenticated
+  - Added demo mode banner
+  - Conditionally show/hide CRUD actions based on auth state
+  - Same UI layout for both modes, only actions differ
+- `frontend/src/App.tsx` - Routing changes
+  - Default route (`/`) now points to Footprints
+  - `/footprints` also points to Footprints
+  - Explore moved to `/legacy/explore` (not linked)
+- `frontend/src/components/NavBar.tsx` - Navigation changes
+  - Removed "Explore" link from navbar
+  - Kept "Footprints" as main tab
+  - Planning and Recipes links unchanged
+
+### Routes
+- `/` → Footprints (default)
+- `/footprints` → Footprints
+- `/plan` → Plan (unchanged)
+- `/recipes` → Recipes (unchanged)
+- `/legacy/explore` → Explore (legacy, not linked)
+
+### Behavior
+
+#### Demo Mode (Not Logged In)
+- Loads demo footprints from `demoFootprints.ts`
+- Shows banner: "You're exploring demo footprints. Sign in to save your own camping memories."
+- Header: "Camping Footprints (Demo)"
+- Actions enabled: Map browsing, marker selection, view details
+- Actions disabled: Add, Edit, Delete
+- Sign-in CTAs: Banner button, header button, footprint card buttons
+
+#### Authenticated Mode (Logged In)
+- Loads real footprints from API (`GET /footprints`)
+- No demo banner
+- Header: "My Camping Footprints"
+- Actions enabled: Full CRUD (Add, Edit, Delete)
+- Standard authenticated experience
+
+### Migration
+- Explore functionality merged into Footprints as demo mode
+- No features deleted, only reorganized
+- Old Explore page preserved at `/legacy/explore` for backward compatibility
+
+## Fix: TypeScript Build Error (NodeJS Namespace)
+
+### Issue
+- Docker build failing with: `error TS2503: Cannot find namespace 'NodeJS'`
+- Occurred in `FootprintForm.tsx` at line 50 when using `NodeJS.Timeout` type
+
+### Fix
+- Changed `NodeJS.Timeout` to `ReturnType<typeof setTimeout>` 
+- Browser-compatible type that works in both Node.js and browser environments
+- No functional changes, only type definition update
+
+### Files Modified
+- `frontend/src/components/FootprintForm.tsx` - Fixed timeout ref type
+
+## Stage D: Free Campsite Search (Nominatim) + Map-First UX
+
+### Files Created
+- `api/src/routes/geocode.ts` - Geocoding proxy route using OpenStreetMap Nominatim
+
+### Files Modified
+- `api/src/index.ts` - Added `/geocode` route (public, no auth required)
+- `frontend/src/api/client.ts` - Added `geocode()` function and `GeocodeResult` interface
+- `frontend/src/components/FootprintForm.tsx` - Complete rewrite with search-first UX
+
+### Commands
+- `npm run dev` - Start API (unchanged, no new env vars required)
+- `npm run dev` - Start frontend (unchanged)
+
+### Environment Variables Required
+- None (Nominatim is free, no API key needed)
+
+### API Endpoints
+
+#### GET /geocode?q=<search text>
+**Query Parameters:**
+- `q` (required): Search query string (e.g., "Royal National Park")
+
+**Response (200):**
+```json
+[
+  {
+    "name": "Euroka Campground, Blue Mountains, NSW, Australia",
+    "lat": -33.7167,
+    "lon": 150.5833
+  }
+]
+```
+
+**Error Responses:**
+- `400`: Invalid query parameter (missing `q`)
+- `502`: Geocoding service unavailable (Nominatim error)
+
+**Headers:**
+- User-Agent: `Campmate/0.1 (contact: dev@campmate.app)` (required by Nominatim)
+
+### Features Implemented
+- **Geocoding Proxy**:
+  - Proxies requests to Nominatim OpenStreetMap API
+  - Limits results to 5
+  - Returns simplified format (name, lat, lon)
+  - Proper error handling and logging
+
+- **Frontend Search UX**:
+  - Search input with placeholder: "Search campsite or place (e.g. Royal National Park)"
+  - Debounced search (300ms delay)
+  - Dropdown suggestions with location name and coordinates
+  - Loading indicator during search
+  - Auto-fills lat/lon when location selected
+
+- **Map Preview**:
+  - Interactive map (250px height) in form
+  - Auto-centers and shows marker when location selected
+  - Click map to fine-tune location
+  - Helper text: "Tip: Click the map to fine-tune location"
+  - Map flies to location on selection (zoom 13)
+
+- **Form Improvements**:
+  - Removed manual lat/lon input fields
+  - Coordinates stored internally (never shown to user)
+  - Validation ensures location is selected before submission
+  - Error message: "Location is required. Please search for a campsite or place."
+
+### Technical Details
+- **Geocoding Service**: OpenStreetMap Nominatim (free, no API key)
+- **Rate Limiting**: Nominatim usage policy (1 request per second recommended)
+- **Backend Logging**: All geocode requests logged with query and result count
+- **Frontend Debouncing**: 300ms delay prevents excessive API calls
+- **Error Handling**: Graceful fallback with user-friendly messages
+
+### UX Flow
+1. User types place name in search input
+2. After 300ms, dropdown shows up to 5 suggestions
+3. User selects a location → map auto-centers and shows marker
+4. User can click map to fine-tune location
+5. Coordinates stored internally, form validates location is set
+6. Submit creates/updates footprint with selected location
+
+### Tradeoffs
+- **Free Service**: Using Nominatim instead of paid services (Mapbox, Google Maps)
+- **No Autocomplete Billing**: Simple search with dropdown, no autocomplete API costs
+- **MVP-Friendly**: Easy to replace with Mapbox later if needed
+- **Human-First UX**: Users never see coordinates, only place names
+
 ## Stage 4 Changes
 
 ### Files Created

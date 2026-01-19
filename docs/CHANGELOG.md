@@ -2,6 +2,422 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5] - Stage E: Merge Explore + Footprints into Unified Experience
+
+### Changed
+- **Unified Footprints Experience**:
+  - Merged "Explore" (demo browsing) and "Footprints" (user data) into single unified page
+  - Footprints page now handles both demo mode (not logged in) and authenticated mode (logged in)
+  - Default route (`/`) now points to Footprints page
+  - `/footprints` route also points to Footprints page
+
+### Removed
+- **Navigation**: Removed standalone "Explore" tab from navbar
+  - Explore functionality is now available as demo mode inside Footprints
+  - Explore page moved to `/legacy/explore` (not linked in navigation)
+
+### Added
+- **Demo Mode in Footprints**:
+  - When not logged in: Shows demo footprints with banner
+  - Banner: "You're exploring demo footprints. Sign in to save your own camping memories."
+  - CRUD actions disabled for demo users (Edit/Delete buttons hidden)
+  - "Sign in to Save" button in header for demo users
+  - "Sign in to manage footprints" button on each footprint card in demo mode
+  - Map browsing, search, and marker selection enabled for demo users
+
+- **Authenticated Mode in Footprints**:
+  - When logged in: Shows real user footprints from database
+  - Full CRUD operations enabled (Add, Edit, Delete)
+  - No demo banner shown
+  - "My Camping Footprints" header title
+
+### Files Modified
+- `frontend/src/pages/Footprints.tsx` - Unified demo and authenticated modes
+- `frontend/src/App.tsx` - Made Footprints default route, moved Explore to legacy
+- `frontend/src/components/NavBar.tsx` - Removed Explore link, kept Footprints as main tab
+
+### Migration Note
+- **Explore functionality is now available as demo mode inside Footprints**
+- Users visiting `/` or `/footprints` will see:
+  - Demo footprints if not logged in
+  - Their own footprints if logged in
+- Old Explore page still accessible at `/legacy/explore` but not linked in navigation
+
+### User Experience
+- **Not Logged In**:
+  - See demo footprints in list and on map
+  - Can browse, click markers, view details
+  - Cannot create, edit, or delete
+  - Banner prompts sign-in
+  - Multiple sign-in CTAs throughout UI
+
+- **Logged In**:
+  - See own footprints from database
+  - Full CRUD operations available
+  - No demo banner
+  - Standard "My Camping Footprints" experience
+
+### Preserved Features
+- **Planning** (`/plan`) - Unchanged, still accessible
+- **Recipes** (`/recipes`) - Unchanged, still accessible
+- All existing functionality preserved, only navigation reorganized
+
+## [1.0.4] - Fix: TypeScript Build Error (NodeJS Namespace)
+
+### Fixed
+- **TypeScript Build Error**: Fixed `Cannot find namespace 'NodeJS'` error in Docker build
+  - Changed `NodeJS.Timeout` to `ReturnType<typeof setTimeout>` in `FootprintForm.tsx`
+  - Browser-compatible type that works in both Node.js and browser environments
+
+### Files Modified
+- `frontend/src/components/FootprintForm.tsx` - Fixed timeout ref type for browser compatibility
+
+## [1.0.3] - Stage D: Free Campsite Search (Nominatim) + Map-First UX
+
+### Added
+- **Geocoding API Endpoint**:
+  - `GET /geocode?q=<search text>` - Proxies to OpenStreetMap Nominatim
+  - Returns up to 5 location results with name, lat, lon
+  - Public endpoint (no authentication required)
+  - Proper User-Agent header: `Campmate/0.1 (contact: dev@campmate.app)`
+  - Error handling: 400 for missing query, 502 for upstream failures
+
+### Changed
+- **FootprintForm UX Improvement**:
+  - ❌ Removed manual latitude/longitude input fields
+  - ✅ Added campsite/place search input with dropdown suggestions
+  - ✅ Added interactive map preview (250px height) with click-to-fine-tune
+  - ✅ Auto-centers map and shows marker when location is selected
+  - ✅ Search results show location name and coordinates
+  - ✅ Map click updates location coordinates
+  - ✅ Debounced search (300ms) to reduce API calls
+  - ✅ Loading indicator during geocoding requests
+
+### Files Created
+- `api/src/routes/geocode.ts` - Geocoding proxy route using Nominatim
+
+### Files Modified
+- `api/src/index.ts` - Added `/geocode` route (public, no auth)
+- `frontend/src/api/client.ts` - Added `geocode()` function and `GeocodeResult` interface
+- `frontend/src/components/FootprintForm.tsx` - Complete rewrite with search-first UX
+
+### User Experience
+- **Search-First Flow**:
+  1. User types place name (e.g., "Royal National Park")
+  2. Dropdown shows up to 5 suggestions with name and coordinates
+  3. User selects a location → map auto-centers and shows marker
+  4. User can click map to fine-tune location
+  5. Coordinates stored internally (never shown as manual inputs)
+
+- **Map Behavior**:
+  - Search result → map flies to location (zoom 13)
+  - Marker click updates selected footprint
+  - Map click updates lat/lon for fine-tuning
+  - Helper text: "Tip: Click the map to fine-tune location"
+
+- **Demo Users**:
+  - Can search and explore locations
+  - Cannot save footprints (auth required)
+
+- **Logged-in Users**:
+  - Full search + map interaction
+  - Can save footprints with selected location
+
+### Technical Details
+- **Geocoding Service**: OpenStreetMap Nominatim (free, no API key required)
+- **Rate Limiting**: Nominatim has usage policy (1 request per second recommended)
+- **Error Handling**: Graceful fallback with user-friendly error messages
+- **Backend Logging**: All geocode requests logged with query and result count
+- **Frontend Debouncing**: 300ms delay to prevent excessive API calls
+
+### Tradeoffs
+- **Free Service**: Using Nominatim instead of paid services (Mapbox, Google Maps)
+- **No Autocomplete Billing**: Simple search with dropdown, no autocomplete API costs
+- **MVP-Friendly**: Easy to replace with Mapbox later if needed
+- **Human-First UX**: Users never see coordinates, only place names
+
+### API Endpoints
+
+#### GET /geocode
+**Query Parameters:**
+- `q` (required): Search query string
+
+**Response (200):**
+```json
+[
+  {
+    "name": "Euroka Campground, Blue Mountains, NSW, Australia",
+    "lat": -33.7167,
+    "lon": 150.5833
+  }
+]
+```
+
+**Error Responses:**
+- `400`: Invalid query parameter
+- `502`: Geocoding service unavailable
+
+## [1.0.2] - Fix: Restored Plan and Recipe Navigation
+
+### Fixed
+- **Navigation Regression**: Restored Plan and Recipe pages to primary navigation
+  - Plan page restored to `/plan` route (was accidentally moved to `/legacy/plan`)
+  - Recipe page restored to `/recipes` route (was accidentally moved to `/legacy/recipes`)
+  - Both pages now visible in navbar as primary tabs
+
+### Changed
+- **Navbar**: Now shows four primary tabs:
+  - Explore (public, default route `/`)
+  - Footprints (requires login, route `/footprints`)
+  - Plan (requires login, route `/plan`)
+  - Recipes (visible, route `/recipes`)
+
+### Files Modified
+- `frontend/src/App.tsx` - Restored Plan and Recipe to main routes (removed from legacy)
+- `frontend/src/components/NavBar.tsx` - Added Plan and Recipe links back to navbar
+
+### Legacy Routes
+- Campsites directory (Search page) remains at `/legacy/search` (not in navbar)
+- Only campsites directory was demoted to legacy, not Plan/Recipe
+
+### Auth Gating
+- **Plan**: Requires login (shows login prompt if not authenticated) ✅
+- **Footprints**: Requires login (shows login prompt if not authenticated) ✅
+- **Explore**: Public, no login required ✅
+- **Recipes**: Visible to all (placeholder page, no auth required)
+
+## [1.0.1] - Navigation Restructure: Explore & Footprints as Primary Flow
+
+### Changed
+- **Navigation Restructure**:
+  - Default route (`/`) now shows **Explore** page (demo footprints, no login required)
+  - **Footprints** page accessible at `/footprints` (requires login, full CRUD)
+  - Removed campsites directory from primary navigation
+  - Simplified navbar to show only "Explore" and "Footprints" links
+
+### Added
+- **New Pages**:
+  - `Explore.tsx` - Public demo mode page showing sample footprints (read-only)
+  - `Footprints.tsx` - Authenticated user's footprint management page (full CRUD)
+
+### Files Created
+- `frontend/src/pages/Explore.tsx` - Explore page for demo footprints
+- `frontend/src/pages/Footprints.tsx` - Footprints page for authenticated users
+
+### Files Modified
+- `frontend/src/App.tsx` - Updated routing: `/` → Explore, `/footprints` → Footprints, moved legacy routes to `/legacy/*`
+- `frontend/src/components/NavBar.tsx` - Updated navigation links to show "Explore" and "Footprints" only
+
+### Legacy Routes
+- Old routes moved to `/legacy/*` paths (not linked in navigation):
+  - `/legacy/search` - Original Search page (campsites + footprints)
+  - `/legacy/plan` - Plan Your Trip page
+  - `/legacy/recipes` - Camp Recipes page
+- Legacy code preserved but not accessible from normal navigation
+
+### User Experience
+- **Explore Page (`/`)**:
+  - Shows demo footprints without requiring login
+  - If user is logged in, suggests visiting Footprints page
+  - Read-only experience with sign-in prompts
+- **Footprints Page (`/footprints`)**:
+  - Requires authentication (shows login prompt if not logged in)
+  - Full CRUD operations for user's footprints
+  - No campsites shown (focused experience)
+
+### Technical Details
+- No breaking changes to existing functionality
+- Legacy routes still accessible if directly navigated to
+- All existing code preserved for backward compatibility
+- Clean separation between public (Explore) and authenticated (Footprints) experiences
+
+## [1.0.0] - Final MVP: Complete Footprints CRUD Experience
+
+### Added
+- **Complete CRUD UI for Footprints**:
+  - Create footprint form with validation (title, location, dates, notes, rating, tags)
+  - Edit footprint functionality with pre-filled form
+  - Delete footprint with confirmation dialog
+  - "Add Footprint" button with guest mode protection (redirects to login)
+  - Edit/Delete buttons on each footprint card (authenticated users only)
+  - Success/error message feedback for all operations
+  - Form validation: lat/lon ranges, date relationships, required fields
+
+### Files Created
+- `frontend/src/components/FootprintForm.tsx` - Reusable form component for create/edit operations
+
+### Files Modified
+- `frontend/src/api/client.ts` - Added `createFootprint()`, `updateFootprint()`, `deleteFootprint()` functions
+- `frontend/src/pages/Search.tsx` - Integrated CRUD UI with form modal, buttons, and error handling
+
+### Features
+- **Authentication Boundaries**:
+  - Only logged-in users can create/edit/delete footprints
+  - Guest users see demo data (read-only)
+  - Guest users redirected to login if they try to create/edit/delete
+- **Form Validation**:
+  - Frontend validation for all fields
+  - Latitude: -90 to 90
+  - Longitude: -180 to 180
+  - End date must be >= start date
+  - Rating: 1-5 (optional)
+  - Real-time error display
+- **User Experience**:
+  - Modal form for create/edit (non-intrusive)
+  - Pre-filled form when editing
+  - Confirmation dialog for delete
+  - Success messages after operations
+  - Automatic list refresh after create/edit/delete
+  - Selection preserved when possible
+
+### Privacy & Security
+- **Guest Mode Protection**: Guest users cannot modify demo data
+- **API Security**: All CRUD operations require authentication
+- **Data Isolation**: Users can only modify their own footprints (enforced by backend)
+
+### Technical Details
+- Form component handles both create and edit modes
+- State management for form visibility, editing footprint, and submission status
+- Error handling with user-friendly messages
+- TypeScript types for all request/response objects
+- No breaking changes to existing functionality
+
+### What's NOT Included (Intentionally Postponed)
+- **RAG/AI Features**: Postponed to future release
+- **Recipe Generator**: Postponed to future release
+- **Map Click to Set Location**: Nice-to-have feature, can be added later
+- **Bulk Operations**: Not in MVP scope
+- **Export/Import**: Not in MVP scope
+
+### MVP Scope Summary
+The MVP focuses on the core Footprints experience:
+- ✅ User-owned camping footprint records
+- ✅ Full CRUD operations for authenticated users
+- ✅ Guest demo mode for exploration
+- ✅ Map + list visualization
+- ✅ Authentication and data privacy
+
+## [0.0.11] - Stage C: Guest Demo Mode for Footprints
+
+### Added
+- **Guest Demo Mode**:
+  - Created `demoFootprints.ts` with 6 realistic NSW/Sydney-area camping footprints
+  - Demo footprints displayed when user is NOT authenticated (read-only)
+  - Guest mode banner with "Demo mode" message and "Sign in" CTA button
+  - Demo data never writes to database (privacy boundary enforced)
+  - Full map + list UI functionality works in guest mode (markers, selection sync, fly-to)
+
+### Files Created
+- `frontend/src/data/demoFootprints.ts` - Demo footprint data (6 realistic NSW locations)
+
+### Files Modified
+- `frontend/src/pages/Search.tsx` - Added guest mode support with demo data and banner
+
+### Features
+- **Data Source Switching**: 
+  - Authenticated users: Fetch real footprints from API (existing Stage B behavior)
+  - Guest users: Display demo footprints (no API calls)
+- **Guest Mode Banner**: 
+  - Subtle blue banner at top of page
+  - Clear "Demo mode" messaging
+  - "Sign in" button linking to login route
+  - Only visible when not authenticated
+- **Empty States**:
+  - Guest mode: Never shows empty state (demo footprints always populate)
+  - Authenticated mode: Shows "No camping footprints yet" when user has no footprints
+
+### Privacy & Security
+- **Read-Only Demo Data**: Guest users never write to database
+- **No API Calls in Guest Mode**: `/footprints` endpoint never called when not authenticated
+- **Clear Separation**: Demo data clearly marked and separate from real user data
+
+### Technical Details
+- Demo footprints use same `Footprint` type as API data
+- Data source decision: `if (token) -> API else -> demoFootprints`
+- Demo footprints include realistic NSW locations: Royal National Park, Blue Mountains, Ku-ring-gai Chase, Wollondilly River, Bouddi National Park, Yengo National Park
+- Map and list selection sync works identically for demo and real footprints
+
+### Limitations
+- No create/edit UI for footprints yet (planned for Stage D)
+- Backend was NOT modified in this stage
+
+## [0.0.10] - Stage B: Frontend Integration for User-Owned Footprints
+
+### Added
+- **Footprint Frontend Integration**:
+  - Added `Footprint` TypeScript interface in API client
+  - Added `listFootprints()` API client function for authenticated requests
+  - Integrated footprint display in Search page when user is authenticated
+  - Footprints appear as green markers on the map and cards in the list
+  - Map and list selection stay synchronized for footprints
+  - Empty state message when authenticated but no footprints exist: "No camping footprints yet. Add your first trip."
+  - Loading states for footprint data fetching
+  - Error handling for footprint API requests
+  - Footprint detail modal showing title, dates, rating, notes, and tags
+
+### Files Modified
+- `frontend/src/api/client.ts` - Added `Footprint` interface and `listFootprints()` function
+- `frontend/src/pages/Search.tsx` - Integrated footprint fetching and display with map/list sync
+
+### Features
+- **Authentication-Aware Display**: Footprints only fetched and displayed when user is authenticated
+- **Map Integration**: Footprints appear as green markers on the map alongside campsites
+- **List Integration**: Footprints appear in a dedicated section at the top of the list when authenticated
+- **Synchronized Selection**: Clicking a footprint in the list or map selects it in both views
+- **Empty State**: Friendly message when authenticated but no footprints exist
+- **Loading States**: Separate loading indicators for campsites and footprints
+
+### Limitations
+- No guest demo data yet (planned for Stage C)
+- No create/edit UI for footprints yet (planned for Stage D)
+- Backend was NOT modified in this stage
+
+### Technical Details
+- Footprints are fetched automatically when user logs in
+- Footprints are cleared when user logs out
+- Map center calculation includes both campsites and footprints
+- Footprint markers use green color (#10b981) to distinguish from campsite markers
+
+## [0.0.9] - Stage A: Backend Support for User-Owned Camping Footprints
+
+### Added
+- **Footprint Data Model**:
+  - Created Mongoose `Footprint` model with all required fields
+  - Fields: userId (ObjectId, ref: User), title (string, required, trimmed), location (lat/lon numbers, required), startDate/endDate (Date, required), notes (string, optional), rating (number, optional, min 1, max 5), tags (array of strings, optional)
+  - Timestamps enabled (createdAt, updatedAt)
+
+- **Footprint API Routes**:
+  - `POST /footprints` - Create new footprint (userId from auth context)
+  - `GET /footprints` - List all user's footprints (sorted by startDate descending)
+  - `GET /footprints/:id` - Get single footprint (user-scoped)
+  - `PATCH /footprints/:id` - Update footprint (user-scoped, partial updates)
+  - `DELETE /footprints/:id` - Delete footprint (user-scoped, returns 204)
+
+- **Validation**:
+  - Zod schemas for create and update operations
+  - Validation rules: lat (-90 to 90), lon (-180 to 180), endDate >= startDate, rating (1-5)
+  - Comprehensive error handling with appropriate HTTP status codes
+
+### Files Created
+- `api/src/models/Footprint.ts` - Footprint Mongoose model
+- `api/src/routes/footprints.ts` - Footprint API routes with full CRUD operations
+
+### Files Modified
+- `api/src/index.ts` - Registered footprints router with auth middleware at `/footprints`
+
+### Features
+- **Authentication Required**: All routes require JWT authentication middleware
+- **User Scoping**: All queries filter by `userId === req.user.userId` to ensure data isolation
+- **Type Safety**: No `any` types, full TypeScript support
+- **Error Handling**: 401 for unauthenticated, 404 for not found/not owned, 400 for validation errors
+- **Security**: No data leakage - returns 404 for unauthorized access attempts
+
+### Technical Details
+- Footprint model follows same patterns as existing Trip model
+- Routes use existing auth middleware and AuthRequest type
+- Validation uses zod with custom refinements for date validation
+- PATCH endpoint validates date relationships against existing data when updating
+
 ## [0.0.8] - Navigation Logo Support
 
 ### Added
