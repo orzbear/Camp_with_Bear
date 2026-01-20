@@ -19,11 +19,15 @@ import geocodeRouter from './routes/geocode.js';
 
 const app = express();
 
+// CORS allowed origins
+// Note: In Docker, browsers access frontend via localhost:3000 (port mapping)
+// The frontend container name (frontend:3000) is only for container-to-container communication
 const allowedOrigins = [
-  "http://localhost:5173",  
-  "http://localhost:3000",  
-  "http://localhost:3001"   
-];
+  "http://localhost:5173",  // Vite dev server
+  "http://localhost:3000",  // Docker frontend (browser access)
+  "http://localhost:3001",  // Alternative port
+  process.env.FRONTEND_URL || "http://localhost:3000"  // Environment variable override
+].filter(Boolean); // Remove any undefined values
 
 
 // Middleware

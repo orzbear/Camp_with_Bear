@@ -2,6 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7] - Security: Sanitize Exposed Secrets
+
+### Security
+- **Secret Sanitization**: Replaced all exposed secrets with placeholder values
+  - OpenWeather API key: Replaced real key with `__REPLACE_IN_ENV__` placeholder
+  - JWT secret: Replaced weak default `dev_change_me` with `__REPLACE_IN_ENV__` placeholder
+  - MongoDB admin passwords: Replaced weak defaults with `__REPLACE_IN_ENV__` placeholders
+
+### Changed
+- **Docker Compose**: All secret values now use `__REPLACE_IN_ENV__` placeholders
+  - Users must provide actual values via `.env` file or environment variables
+  - Docker Compose still works locally with `.env` file overrides
+- **Documentation**: Updated `docs/env.md` and `docs/SMOKE_TEST_RESULTS.md` with placeholders
+- **Audit**: Updated `docs/SECRET_AUDIT.md` with remediation status
+
+### Files Modified
+- `docker/docker-compose.yml` - Replaced hardcoded secrets with placeholders
+- `docs/env.md` - Updated examples to use placeholders
+- `docs/SMOKE_TEST_RESULTS.md` - Sanitized API key in test results
+- `docs/SECRET_AUDIT.md` - Added remediation status section
+
+### Important Notes
+- **Production Deployment**: All secrets must be provided via environment variables or `.env` file
+- **Local Development**: Create a `.env` file in `docker/` directory with actual values
+- **API Key Rotation**: If the exposed OpenWeather API key was real, it should be rotated immediately
+
+## [1.0.6] - Fix: Docker Production Configuration
+
+### Fixed
+- **Frontend API Base URL**: Fixed Docker build to properly set `VITE_API_BASE` at build time
+  - Added build argument to frontend Dockerfile
+  - Updated docker-compose.yml to pass build args
+  - Vite environment variables are embedded at build time, not runtime
+
+- **CORS Configuration**: Updated API to allow requests from Docker frontend
+  - Added support for `FRONTEND_URL` environment variable
+  - Maintained localhost origins for local development
+  - Removed Docker service name from CORS (browsers use localhost via port mapping)
+
+### Files Modified
+- `docker/frontend/Dockerfile` - Added `ARG` and `ENV` for `VITE_API_BASE` build-time variable
+- `docker/docker-compose.yml` - Added build args for frontend service
+- `api/src/index.ts` - Updated CORS allowedOrigins with environment variable support
+
+### Technical Details
+- **Vite Environment Variables**: Must be set at build time (not runtime) using `ARG` and `ENV` in Dockerfile
+- **Docker Networking**: Browsers access services via localhost port mapping (not Docker service names)
+  - Frontend: `http://localhost:3000` (browser → nginx container)
+  - API: `http://localhost:8080` (browser → API container)
+- **CORS**: API now accepts requests from `http://localhost:3000` and configurable via `FRONTEND_URL` env var
+
+### Production Readiness
+- ✅ Frontend can reach API in Docker
+- ✅ CORS allows browser requests from frontend
+- ✅ All environment variables properly configured
+- ✅ Build-time vs runtime variables correctly handled
+
 ## [1.0.5] - Stage E: Merge Explore + Footprints into Unified Experience
 
 ### Changed
