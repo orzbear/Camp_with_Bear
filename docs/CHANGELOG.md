@@ -2,6 +2,70 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.0] - Stage 2A: AWS Networking Infrastructure (Terraform)
+
+### Added
+- **Terraform Infrastructure as Code**:
+  - Created reusable network module (`infra/modules/network`)
+  - VPC with CIDR 10.10.0.0/16 in ap-southeast-2 region
+  - 2 public subnets across 2 availability zones
+  - 2 private subnets across 2 availability zones
+  - Internet Gateway for public subnet internet access
+  - Public route table with route to Internet Gateway
+  - Route table associations for public subnets
+
+- **Dev Environment Configuration** (`infra/envs/dev`):
+  - Main Terraform configuration wiring network module
+  - Variables for region (ap-southeast-2), project (campmate), env (dev)
+  - Outputs for VPC ID, subnet IDs, route table ID, IGW ID
+  - S3 backend configuration for state management
+
+### Infrastructure Resources
+- **VPC**: `campmate-dev-vpc` (10.10.0.0/16) with DNS support
+- **Internet Gateway**: `campmate-dev-igw` attached to VPC
+- **Public Subnets**: 2 subnets (10.10.0.0/24, 10.10.1.0/24) with auto-assign public IP
+- **Private Subnets**: 2 subnets (10.10.2.0/24, 10.10.3.0/24) - isolated (no NAT Gateway yet)
+- **Public Route Table**: Routes 0.0.0.0/0 to Internet Gateway
+
+### Tagging
+All resources tagged with:
+- `Project = "campmate"`
+- `Env = "dev"`
+- `Name = "campmate-dev-<resource-type>"`
+
+### Files Created
+- `infra/modules/network/main.tf` - Network module resources
+- `infra/modules/network/variables.tf` - Module inputs
+- `infra/modules/network/outputs.tf` - Module outputs
+- `infra/envs/dev/main.tf` - Dev environment configuration
+- `infra/envs/dev/variables.tf` - Environment variables
+- `infra/envs/dev/outputs.tf` - Environment outputs
+
+### Files Modified
+- `docs/BUILD_LOG.md` - Added Stage 2A networking infrastructure documentation
+- `docs/CHANGELOG.md` - Added version 0.1.0 entry
+
+### Commands
+- `terraform init` - Initialize Terraform backend and providers
+- `terraform fmt -recursive` - Format all Terraform files
+- `terraform validate` - Validate Terraform configuration
+- `terraform plan` - Preview infrastructure changes
+- `terraform apply` - Create infrastructure resources
+
+### Verification
+After `terraform apply`, verify in AWS Console:
+- VPC exists with correct CIDR
+- 2 public subnets in different AZs
+- 2 private subnets in different AZs
+- Internet Gateway attached to VPC
+- Public route table configured correctly
+
+### Notes
+- Private subnets are isolated (no NAT Gateway yet - will be added in Stage 2B)
+- Module structure allows reuse for staging/prod environments
+- Availability zones selected dynamically using `data.aws_availability_zones`
+- Follows AWS best practices for VPC design and resource tagging
+
 ## [1.0.10] - Improvement: Health Endpoint Robustness
 
 ### Improved

@@ -2,6 +2,220 @@
 
 This document lists all generated commands and files.
 
+## Stage 2A: AWS Networking Infrastructure (Terraform)
+
+### Goal
+Create base network infrastructure for Campmate on AWS (ap-southeast-2) using Terraform. This provides the foundation for future ECS deployment with best practices and clean module structure.
+
+### Files Created
+
+#### Network Module (`infra/modules/network/`)
+- `main.tf` - Core networking resources:
+  - VPC (CIDR: 10.10.0.0/16) with DNS support enabled
+  - Internet Gateway
+  - 2 public subnets across 2 availability zones
+  - 2 private subnets across 2 availability zones
+  - Public route table with route to Internet Gateway
+  - Route table associations for public subnets
+- `variables.tf` - Module inputs:
+  - `vpc_cidr` - VPC CIDR block
+  - `project` - Project name for naming
+  - `env` - Environment name
+  - `tags` - Common tags map
+- `outputs.tf` - Module outputs:
+  - `vpc_id` - VPC ID
+  - `public_subnet_ids` - List of public subnet IDs
+  - `private_subnet_ids` - List of private subnet IDs
+  - `public_route_table_id` - Public route table ID
+  - `internet_gateway_id` - Internet Gateway ID
+
+#### Dev Environment (`infra/envs/dev/`)
+- `main.tf` - Environment configuration:
+  - AWS provider configuration (ap-southeast-2)
+  - Network module instantiation
+  - Data source for availability zones
+- `variables.tf` - Environment variables:
+  - `region` - AWS region (default: ap-southeast-2)
+  - `project` - Project name (default: campmate)
+  - `env` - Environment name (default: dev)
+- `outputs.tf` - Environment outputs (passes through module outputs)
+- `backend.tf` - S3 backend configuration (already existed)
+
+### Infrastructure Resources Created
+
+1. **VPC** (`campmate-dev-vpc`)
+   - CIDR: 10.10.0.0/16
+   - DNS hostnames: enabled
+   - DNS support: enabled
+
+2. **Internet Gateway** (`campmate-dev-igw`)
+   - Attached to VPC
+   - Provides internet access for public subnets
+
+3. **Public Subnets** (2 subnets)
+   - `campmate-dev-public-subnet-1` - AZ 1
+   - `campmate-dev-public-subnet-2` - AZ 2
+   - CIDR blocks: 10.10.0.0/24, 10.10.1.0/24
+   - Auto-assign public IP: enabled
+
+4. **Private Subnets** (2 subnets)
+   - `campmate-dev-private-subnet-1` - AZ 1
+   - `campmate-dev-private-subnet-2` - AZ 2
+   - CIDR blocks: 10.10.2.0/24, 10.10.3.0/24
+   - No internet access (isolated, NAT Gateway to be added in next stage)
+
+5. **Public Route Table** (`campmate-dev-public-rt`)
+   - Route: 0.0.0.0/0 → Internet Gateway
+   - Associated with both public subnets
+
+### Tagging Strategy
+All resources tagged with:
+- `Project = "campmate"`
+- `Env = "dev"`
+- `Name = "campmate-dev-<resource-type>"`
+
+### Commands
+
+#### Initial Setup
+```bash
+cd infra/envs/dev
+terraform init
+```
+**Note:** This should already be done, but run it if starting fresh or after module changes.
+
+#### Validation
+```bash
+terraform fmt -recursive
+terraform validate
+```
+
+#### Planning
+```bash
+terraform plan
+```
+**Expected Output:** Should show creation of:
+- 1 VPC resource
+- 1 Internet Gateway resource
+- 2 public subnet resources
+- 2 private subnet resources
+- 1 public route table resource
+- 2 route table association resources
+- Total: ~7 resources to be created
+
+#### Apply
+```bash
+terraform apply
+```
+**Expected Output:** Creates all networking resources. Review the plan and type `yes` to confirm.
+
+### Acceptance Checks
+
+#### 1. Terraform Validation
+```bash
+cd infra/envs/dev
+terraform fmt -recursive
+terraform validate
+```
+**Expected:** Both commands should succeed with no errors.
+
+#### 2. Terraform Plan
+```bash
+cd infra/envs/dev
+terraform plan
+```
+**Expected:** Plan should show only VPC/subnets/IGW/route table changes (no NAT Gateway, no ECS resources).
+
+**Sample Output:**
+```
+Plan: 7 to add, 0 to change, 0 to destroy.
+
+  # module.network.aws_internet_gateway.main will be created
+  # module.network.aws_route_table.public will be created
+  # module.network.aws_route_table_association.public[0] will be created
+  # module.network.aws_route_table_association.public[1] will be created
+  # module.network.aws_subnet.private[0] will be created
+  # module.network.aws_subnet.private[1] will be created
+  # module.network.aws_subnet.public[0] will be created
+  # module.network.aws_subnet.public[1] will be created
+  # module.network.aws_vpc.main will be created
+```
+
+#### 3. Terraform Apply
+```bash
+cd infra/envs/dev
+terraform apply
+```
+**Expected:** Resources created successfully. Review the plan and confirm with `yes`.
+
+#### 4. AWS Console Verification
+After `terraform apply` completes, verify in AWS Console (ap-southeast-2):
+
+1. **VPC Dashboard**:
+   - Navigate to: VPC → Your VPCs
+   - Verify: `campmate-dev-vpc` exists with CIDR `10.10.0.0/16`
+   - Verify: DNS hostnames and DNS resolution are enabled
+
+2. **Subnets**:
+   - Navigate to: VPC → Subnets
+   - Verify: 4 subnets exist:
+     - `campmate-dev-public-subnet-1` (10.10.0.0/24) - Public
+     - `campmate-dev-public-subnet-2` (10.10.1.0/24) - Public
+     - `campmate-dev-private-subnet-1` (10.10.2.0/24) - Private
+     - `campmate-dev-private-subnet-2` (10.10.3.0/24) - Private
+   - Verify: Public subnets are in different AZs
+   - Verify: Private subnets are in different AZs
+
+3. **Internet Gateway**:
+   - Navigate to: VPC → Internet Gateways
+   - Verify: `campmate-dev-igw` exists and is attached to `campmate-dev-vpc`
+
+4. **Route Tables**:
+   - Navigate to: VPC → Route Tables
+   - Verify: `campmate-dev-public-rt` exists
+   - Click on route table → Routes tab
+   - Verify: Route `0.0.0.0/0` → Internet Gateway exists
+   - Click on Subnet associations tab
+   - Verify: Both public subnets are associated
+
+5. **Tags**:
+   - Verify all resources have tags:
+     - `Project = campmate`
+     - `Env = dev`
+     - `Name = campmate-dev-<resource-type>`
+
+#### 5. Terraform Outputs
+```bash
+cd infra/envs/dev
+terraform output
+```
+**Expected:** Should show:
+- `vpc_id` - VPC ID (e.g., `vpc-xxxxxxxxx`)
+- `public_subnet_ids` - List of 2 public subnet IDs
+- `private_subnet_ids` - List of 2 private subnet IDs
+- `public_route_table_id` - Public route table ID
+- `internet_gateway_id` - Internet Gateway ID
+
+### Technical Details
+
+- **Availability Zones**: Dynamically selected using `data.aws_availability_zones` (first 2 available AZs)
+- **CIDR Allocation**:
+  - Public subnets: 10.10.0.0/24, 10.10.1.0/24
+  - Private subnets: 10.10.2.0/24, 10.10.3.0/24
+- **Module Structure**: Reusable module in `infra/modules/network` for multi-environment support
+- **Backend**: S3 backend configured in `backend.tf` (state stored in `campmate-chohan-tfstate`)
+
+### Next Steps (Not Implemented)
+- NAT Gateway for private subnet internet access (Stage 2B)
+- Security Groups for ECS tasks
+- Application Load Balancer
+- ECS Cluster and Service definitions
+
+### Notes
+- Private subnets are currently isolated (no internet access)
+- No NAT Gateway created yet (will be added in next stage)
+- Module is reusable for staging/prod environments
+- All resources follow AWS best practices for naming and tagging
+
 ## Stage E: Merge Explore + Footprints into Unified Experience
 
 ### Goal
