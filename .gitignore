@@ -63,3 +63,12 @@ logs/
 # Docker
 .dockerignore
 
+# Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
+**/tfplan
+
+# Terraform provider binaries (Windows)
+*.exe
+
