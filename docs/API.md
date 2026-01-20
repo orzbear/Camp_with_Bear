@@ -2,6 +2,37 @@
 
 ## API Service (Port 8080)
 
+### CORS Configuration
+
+The API uses environment-based CORS (Cross-Origin Resource Sharing) configuration for security.
+
+**Development Mode (`NODE_ENV=development`):**
+- Automatically allows localhost origins:
+  - `http://localhost:5173` (Vite dev server)
+  - `http://localhost:3000` (Docker frontend)
+  - `http://localhost:3001` (Alternative port)
+- Additionally allows origins from `FRONTEND_URL` or `ALLOWED_ORIGINS` environment variables
+
+**Production Mode (`NODE_ENV=production`):**
+- **Only** allows origins configured via environment variables:
+  - `FRONTEND_URL`: Single origin (e.g., `https://app.example.com`)
+  - `ALLOWED_ORIGINS`: Comma-separated list (e.g., `https://app.example.com,https://www.example.com`)
+- **Localhost origins are NOT allowed** in production
+- Server will **fail to start** if no allowed origins are configured
+
+**Configuration:**
+- Set `FRONTEND_URL` for a single origin, or `ALLOWED_ORIGINS` for multiple origins
+- Allowed origins are logged at server startup for debugging
+- CORS credentials are disabled (no cookies/auth headers in CORS requests)
+
+**Example Production Configuration:**
+```bash
+NODE_ENV=production
+FRONTEND_URL=https://app.example.com
+# OR for multiple origins:
+ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
+```
+
 | Method | Endpoint | Description | Request Body | Response |
 |--------|----------|-------------|--------------|----------|
 | POST | `/auth/register` | Register new user | `{ email, password }` | `201 { userId }` |
@@ -20,7 +51,7 @@
 | GET | `/public/campsites` | List public campsites | Query: `query?, type?` | `200 [{ campsite objects }]` |
 | GET | `/public/campsites/:id` | Get campsite details | - | `200 { campsite object }` |
 | GET | `/geocode` | Geocode place name (public) | Query: `q=<search text>` | `200 [{ name, lat, lon }]` |
-| GET | `/health` | Health check | - | `200 { status, service, version }` |
+| GET | `/health` | Health check | - | `200 { status, service, version, timestamp }` |
 
 ### Auth Endpoints Examples
 
@@ -264,6 +295,42 @@ Authorization: Bearer <accessToken>
 - No authentication required (public endpoint)
 - Backend sets proper User-Agent header: `Campmate/0.1 (contact: dev@campmate.app)`
 - Nominatim usage policy: 1 request per second recommended
+
+### Health Check Endpoint (Public, no authentication required)
+
+#### GET /health
+**Description:** Liveness check endpoint for load balancers and monitoring systems.
+
+**Response (200):**
+```json
+{
+  "status": "ok",
+  "service": "api",
+  "version": "0.0.1",
+  "timestamp": "2025-01-15T10:30:45.123Z"
+}
+```
+
+**Response Fields:**
+- `status` (string): Always `"ok"` when the endpoint responds
+- `service` (string): Service identifier, always `"api"`
+- `version` (string): Application version from `package.json`, or `"unknown"` if version cannot be read
+- `timestamp` (string): ISO 8601 timestamp of when the health check was performed
+
+**Error Handling:**
+- If `package.json` cannot be read, `version` will be `"unknown"` but the endpoint still returns 200 OK
+- Endpoint never fails (always returns 200) as long as the server process is running
+
+**Use Cases:**
+- AWS Load Balancer health checks
+- Kubernetes liveness probes
+- Monitoring system uptime checks
+
+**Notes:**
+- No authentication required (public endpoint)
+- Fast response time (no external dependencies)
+- Deterministic response structure
+- Does not check database connectivity or external services (liveness check only)
 
 ## RAG Service (Port 8000)
 

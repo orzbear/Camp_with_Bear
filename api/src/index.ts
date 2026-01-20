@@ -19,16 +19,54 @@ import geocodeRouter from './routes/geocode.js';
 
 const app = express();
 
-// CORS allowed origins
-// Note: In Docker, browsers access frontend via localhost:3000 (port mapping)
-// The frontend container name (frontend:3000) is only for container-to-container communication
-const allowedOrigins = [
-  "http://localhost:5173",  // Vite dev server
-  "http://localhost:3000",  // Docker frontend (browser access)
-  "http://localhost:3001",  // Alternative port
-  process.env.FRONTEND_URL || "http://localhost:3000"  // Environment variable override
-].filter(Boolean); // Remove any undefined values
+// CORS allowed origins configuration
+function getAllowedOrigins(): string[] {
+  const isProduction = NODE_ENV === 'production';
+  const origins: string[] = [];
 
+  // Development: Allow localhost origins
+  if (!isProduction) {
+    origins.push(
+      "http://localhost:5173",  // Vite dev server
+      "http://localhost:3000",   // Docker frontend (browser access)
+      "http://localhost:3001"   // Alternative port
+    );
+  }
+
+  // Support multiple origins via ALLOWED_ORIGINS (comma-separated)
+  if (process.env.ALLOWED_ORIGINS) {
+    const allowedOriginsList = process.env.ALLOWED_ORIGINS
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(Boolean);
+    origins.push(...allowedOriginsList);
+  }
+
+  // Support single origin via FRONTEND_URL
+  if (process.env.FRONTEND_URL) {
+    origins.push(process.env.FRONTEND_URL);
+  }
+
+  // Production: Fail fast if no allowed origins configured
+  if (isProduction && origins.length === 0) {
+    throw new Error(
+      'CORS configuration error: In production, at least one of ALLOWED_ORIGINS or FRONTEND_URL must be set. ' +
+      'Localhost origins are not allowed in production.'
+    );
+  }
+
+  // Remove duplicates and filter out any empty values
+  const uniqueOrigins = Array.from(new Set(origins.filter(Boolean)));
+
+  // Log allowed origins at startup (once)
+  if (uniqueOrigins.length > 0) {
+    console.log(`✅ CORS allowed origins (${NODE_ENV}):`, uniqueOrigins);
+  }
+
+  return uniqueOrigins;
+}
+
+const allowedOrigins = getAllowedOrigins();
 
 // Middleware
 app.use(helmet());

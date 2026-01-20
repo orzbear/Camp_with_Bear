@@ -1,5 +1,7 @@
 # Smoke Test Results
 
+> **Note:** All credentials and IDs are redacted examples.
+
 **Date:** 2025-11-12 17:16:09  
 **Environment:** Docker Compose  
 **OpenWeather API Key:** __REPLACE_IN_ENV__ (placeholder - use actual key in .env file)
@@ -8,14 +10,14 @@
 
 - API server running on http://localhost:8080 ✅
 - MongoDB running and connected ✅
-- User: bear@test.com / Password123! ✅
+- User: user@example.com / ******** ✅
 
 ## Test Results Summary
 
 | Test | Status | Status Code | Notes |
 |------|--------|-------------|-------|
 | 1. Login | ✅ SUCCESS | 200 | Token obtained successfully |
-| 2. Create Trip | ✅ SUCCESS | 201 | Trip ID: 6914263a10cc9c6c7c75ece1 |
+| 2. Create Trip | ✅ SUCCESS | 201 | Trip ID: 64f0abc123def45678901234 |
 | 3. List Trips | ✅ SUCCESS | 200 | Found 1 trip |
 | 4. Get Single Trip | ✅ SUCCESS | 200 | Trip retrieved successfully |
 | 5. Weather | ❌ FAILED | 502 | Bad Gateway - OpenWeather API error |
@@ -31,7 +33,7 @@
 ```powershell
 $login = Invoke-RestMethod -Uri "http://localhost:8080/auth/login" `
   -Method POST -ContentType "application/json" `
-  -Body '{"email":"bear@test.com","password":"Password123!"}'
+  -Body '{"email":"user@example.com","password":"********"}'
 $token = $login.accessToken
 ```
 
@@ -73,11 +75,11 @@ Invoke-RestMethod -Uri "http://localhost:8080/trips" `
 **Response:**
 ```json
 {
-  "id": "6914263a10cc9c6c7c75ece1"
+  "id": "64f0abc123def45678901234"
 }
 ```
 
-**Trip ID:** `6914263a10cc9c6c7c75ece1`
+**Trip ID:** `64f0abc123def45678901234`
 
 ---
 
@@ -97,8 +99,8 @@ Invoke-RestMethod -Uri "http://localhost:8080/trips" `
 - **First Trip:**
 ```json
 {
-  "_id": "6914263a10cc9c6c7c75ece1",
-  "userId": "6914083b14e1512746e0e44e",
+  "_id": "64f0abc123def45678901234",
+  "userId": "64f0abc123def45678901235",
   "location": {
     "lat": -33.7,
     "lon": 150.3,
@@ -121,7 +123,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/trips" `
 
 **Command:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/trips/6914263a10cc9c6c7c75ece1" `
+Invoke-RestMethod -Uri "http://localhost:8080/trips/64f0abc123def45678901234" `
   -Headers @{ "Authorization" = "Bearer $token" }
 ```
 
@@ -166,7 +168,7 @@ The remote server returned an error: (502) Bad Gateway.
 
 **Command:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/trips/6914263a10cc9c6c7c75ece1" `
+Invoke-RestMethod -Uri "http://localhost:8080/trips/64f0abc123def45678901234" `
   -Method DELETE `
   -Headers @{ "Authorization" = "Bearer $token" }
 ```
