@@ -5,6 +5,10 @@ COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ .
 COPY docs/ /docs/
+# Vite environment variables must be set at build time
+# Note: Browser makes requests, so use localhost (port mapping) not Docker service name
+ARG VITE_API_BASE=http://localhost:8080
+ENV VITE_API_BASE=$VITE_API_BASE
 RUN npm run build
 
 # Serve stage

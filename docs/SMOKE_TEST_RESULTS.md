@@ -2,7 +2,7 @@
 
 **Date:** 2025-11-12 17:16:09  
 **Environment:** Docker Compose  
-**OpenWeather API Key:** c5df017a7961da45a250532bba658b24
+**OpenWeather API Key:** __REPLACE_IN_ENV__ (placeholder - use actual key in .env file)
 
 ## Prerequisites
 
