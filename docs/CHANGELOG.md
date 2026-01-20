@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.8] - Documentation: Sanitize Test Data
+
+### Security
+- **Test Data Sanitization**: Replaced sensitive test data in documentation with placeholders
+  - Test credentials: Replaced real email/password with `user@example.com / ********`
+  - MongoDB ObjectIds: Replaced real IDs with fake example IDs (`64f0abc123def45678901234`, etc.)
+
+### Changed
+- **Documentation**: Updated `docs/SMOKE_TEST_RESULTS.md` to remove sensitive test data
+  - Added disclaimer note at the top: "All credentials and IDs are redacted examples"
+  - Replaced all real MongoDB ObjectIds with fake example IDs
+  - Replaced real test credentials with generic placeholders
+  - Test structure and meaning preserved for documentation purposes
+
+### Files Modified
+- `docs/SMOKE_TEST_RESULTS.md` - Sanitized test credentials and MongoDB ObjectIds
+
+### Important Notes
+- **Test Documentation**: All sensitive data has been redacted while maintaining test structure
+- **Example IDs**: All MongoDB ObjectIds are now clearly fake examples (24-character hex strings)
+- **Credentials**: Test credentials are now generic placeholders that cannot be used for authentication
+
 ## [1.0.7] - Security: Sanitize Exposed Secrets
 
 ### Security
