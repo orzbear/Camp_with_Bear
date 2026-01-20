@@ -2,6 +2,73 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.10] - Improvement: Health Endpoint Robustness
+
+### Improved
+- **Health Endpoint Error Handling** (`api/src/routes/health.ts`):
+  - Wrapped `package.json` read in try-catch block
+  - If reading fails, version defaults to `"unknown"` instead of crashing
+  - Endpoint remains functional even if `package.json` is missing or unreadable
+  - Added warning log when version cannot be read (for debugging)
+
+### Added
+- **Health Response Enhancement**:
+  - Added `timestamp` field to health check response (ISO 8601 format)
+  - Provides request time for monitoring and debugging purposes
+
+### Changed
+- **Health Endpoint Response**:
+  - Response now includes: `status`, `service`, `version`, `timestamp`
+  - Version field gracefully handles read failures (returns `"unknown"`)
+
+### Files Modified
+- `api/src/routes/health.ts` - Added error handling and timestamp field
+- `docs/API.md` - Added detailed health endpoint documentation
+- `docs/CHANGELOG.md` - Documented improvements
+
+### Important Notes
+- **Backward Compatibility**: Health endpoint still returns 200 OK even if version cannot be read
+- **Liveness Check**: Endpoint remains a simple liveness check (no database or external API dependencies)
+- **Production Ready**: Suitable for AWS Load Balancer health checks with improved error resilience
+
+## [1.0.9] - Security: Production-Safe CORS Configuration
+
+### Security
+- **CORS Refactoring**: Implemented environment-based CORS configuration for production safety
+  - Development: Allows localhost origins + configured origins
+  - Production: Only allows configured origins (no localhost)
+  - Production fails fast if no allowed origins configured
+
+### Changed
+- **CORS Configuration** (`api/src/index.ts`):
+  - Introduced `NODE_ENV`-based behavior
+  - Development mode: Allows localhost origins (`http://localhost:5173`, `http://localhost:3000`, `http://localhost:3001`) plus `FRONTEND_URL` or `ALLOWED_ORIGINS`
+  - Production mode: Only allows origins from `FRONTEND_URL` or `ALLOWED_ORIGINS` (localhost explicitly disallowed)
+  - Added startup logging of allowed origins for debugging
+  - Production fails fast with clear error if no allowed origins configured
+
+- **Environment Variables**:
+  - Added `ALLOWED_ORIGINS` support (comma-separated list for multiple origins)
+  - `FRONTEND_URL` now required in production (or `ALLOWED_ORIGINS`)
+  - Updated documentation in `docs/env.md` with new CORS variables and behavior
+
+### Added
+- **Multiple Origins Support**: 
+  - `ALLOWED_ORIGINS` environment variable for comma-separated list of origins
+  - `FRONTEND_URL` continues to work for single origin
+  - Both can be used together (origins are merged and deduplicated)
+
+### Files Modified
+- `api/src/index.ts` - Refactored CORS configuration with environment-based logic
+- `docs/env.md` - Documented `ALLOWED_ORIGINS` and updated CORS behavior
+- `docs/API.md` - Added CORS configuration section
+
+### Important Notes
+- **Production Deployment**: Must set either `FRONTEND_URL` or `ALLOWED_ORIGINS` in production
+- **Security**: Localhost origins are automatically disallowed in production
+- **Backward Compatibility**: Development mode behavior unchanged (localhost still allowed)
+- **No Wildcards**: Wildcard origins (`*`) are not supported for security
+
 ## [1.0.8] - Documentation: Sanitize Test Data
 
 ### Security

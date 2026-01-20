@@ -22,13 +22,17 @@ This document lists all environment variables required for CampMate services.
 | `JWT_SECRET` | None | **Yes** | `api/src/config/env.ts`, `api/src/middleware/auth.ts`, `api/src/routes/auth.ts` | Secret key for signing and verifying JWT tokens. Must be a strong, random string. |
 | `OPENWEATHER_API_KEY` | None | **Yes** | `api/src/config/env.ts`, `api/src/routes/weather.ts`, `api/src/routes/checklist.ts` | OpenWeather API key for weather forecast data. Required for weather and checklist features. |
 | `PORT` | `8080` | No | `api/src/config/env.ts`, `api/src/index.ts` | Port number for the API server to listen on. |
-| `NODE_ENV` | `development` | No | `api/src/config/env.ts`, `api/src/index.ts` | Environment mode. When set to `production`, campsite seeding is disabled. |
-| `FRONTEND_URL` | `http://localhost:3000` | No | `api/src/index.ts` | Frontend URL for CORS configuration. Used to allow cross-origin requests. Falls back to default if not set. |
+| `NODE_ENV` | `development` | No | `api/src/config/env.ts`, `api/src/index.ts` | Environment mode. When set to `production`, campsite seeding is disabled and CORS is restricted. |
+| `FRONTEND_URL` | None | **Yes (Production)** | `api/src/index.ts` | Single frontend URL for CORS configuration. Used in production when only one origin is needed. |
+| `ALLOWED_ORIGINS` | None | **Yes (Production)** | `api/src/index.ts` | Comma-separated list of allowed origins for CORS. Alternative to `FRONTEND_URL` when multiple origins are needed. Example: `https://app.example.com,https://www.example.com` |
 
 **Notes:**
 - `MONGO_URI`, `JWT_SECRET`, and `OPENWEATHER_API_KEY` are validated at startup and will cause the server to fail fast if missing
-- `NODE_ENV=production` disables automatic campsite seeding
-- `FRONTEND_URL` is used in CORS configuration to allow requests from the frontend
+- `NODE_ENV=production` disables automatic campsite seeding and restricts CORS to configured origins only
+- **CORS Configuration:**
+  - **Development**: Localhost origins (`http://localhost:5173`, `http://localhost:3000`, `http://localhost:3001`) are automatically allowed, plus any origins from `FRONTEND_URL` or `ALLOWED_ORIGINS`
+  - **Production**: Only origins from `FRONTEND_URL` or `ALLOWED_ORIGINS` are allowed. Localhost origins are **not** allowed. Server will fail to start if no allowed origins are configured.
+- Use `FRONTEND_URL` for a single origin, or `ALLOWED_ORIGINS` for multiple origins (comma-separated)
 
 ## Database (MongoDB)
 
@@ -80,9 +84,11 @@ Before deploying to production, ensure:
 - [ ] `JWT_SECRET` is set to a strong, random string (replace `__REPLACE_IN_ENV__` placeholder)
 - [ ] `OPENWEATHER_API_KEY` is set to your own OpenWeather API key (replace `__REPLACE_IN_ENV__` placeholder)
 - [ ] `MONGO_URI` points to your production MongoDB instance
-- [ ] `NODE_ENV=production` is set (disables campsite seeding)
+- [ ] `NODE_ENV=production` is set (disables campsite seeding and restricts CORS)
 - [ ] `VITE_API_BASE` is set correctly for your deployment (build-time variable)
-- [ ] `FRONTEND_URL` is set if frontend is hosted on a different domain/port
+- [ ] **CORS Configuration**: Either `FRONTEND_URL` or `ALLOWED_ORIGINS` is set (required in production)
+  - `FRONTEND_URL=https://app.example.com` (for single origin)
+  - OR `ALLOWED_ORIGINS=https://app.example.com,https://www.example.com` (for multiple origins)
 - [ ] MongoDB has proper authentication configured (if applicable)
 
 ## Local Development
