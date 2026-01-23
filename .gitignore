@@ -68,6 +68,8 @@ logs/
 **/*.tfstate
 **/*.tfstate.backup
 **/tfplan
+**/.tfvars
+**/*.tfvars
 
 # Terraform provider binaries (Windows)
 *.exe

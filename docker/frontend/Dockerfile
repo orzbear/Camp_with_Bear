@@ -1,14 +1,19 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
+# Copy package files from frontend directory (build context is project root)
 COPY frontend/package*.json ./
 RUN npm ci
+# Copy frontend source code
 COPY frontend/ .
-COPY docs/ /docs/
 # Vite environment variables must be set at build time
-# Note: Browser makes requests, so use localhost (port mapping) not Docker service name
-ARG VITE_API_BASE=http://localhost:8080
+# Default to /api for ALB routing (can be overridden with --build-arg)
+# For local dev, use: docker build --build-arg VITE_API_BASE=http://localhost:8080
+ARG VITE_API_BASE=/api
 ENV VITE_API_BASE=$VITE_API_BASE
+# Verify environment variable is set correctly
+RUN echo "Building with VITE_API_BASE=$VITE_API_BASE"
+# Build without cache to ensure fresh build
 RUN npm run build
 
 # Serve stage

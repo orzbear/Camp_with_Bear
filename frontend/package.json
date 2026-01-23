@@ -11,7 +11,7 @@
     "prebuild": "npm run gen:types",
     "gen:types:api": "openapi-typescript ../docs/openapi/api.yaml -o src/types/api.d.ts",
     "gen:types:rag": "openapi-typescript ../docs/openapi/rag.yaml -o src/types/rag.d.ts",
-    "gen:types": "openapi-typescript ../docs/openapi/api.yaml -o src/types/api.d.ts"
+    "gen:types": "openapi-typescript ./openapi/api.yaml -o src/types/api.d.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

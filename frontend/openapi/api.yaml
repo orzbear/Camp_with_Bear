@@ -1,0 +1,455 @@
+openapi: 3.0.3
+info:
+  title: CampMate API
+  version: 0.1.0
+  description: CampMate API specification
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /auth/register:
+    post:
+      summary: Register new user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Bad request
+
+  /auth/login:
+    post:
+      summary: User login
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Unauthorized
+
+  /trips:
+    post:
+      summary: Create new trip
+      tags:
+        - Trips
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTripRequest'
+      responses:
+        '201':
+          description: Trip created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTripResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+    get:
+      summary: List trips for current user
+      tags:
+        - Trips
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trip'
+        '401':
+          description: Unauthorized
+
+  /trips/{id}:
+    get:
+      summary: Get trip details
+      tags:
+        - Trips
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trip details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '404':
+          description: Trip not found
+        '401':
+          description: Unauthorized
+    delete:
+      summary: Delete trip
+      tags:
+        - Trips
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Trip deleted
+        '404':
+          description: Trip not found
+        '401':
+          description: Unauthorized
+
+  /weather:
+    get:
+      summary: Get weather data
+      tags:
+        - Weather
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Weather data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '502':
+          description: Weather service error
+
+  /checklist/{tripId}:
+    get:
+      summary: Get trip checklist
+      tags:
+        - Checklist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checklist items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Trip not found
+        '502':
+          description: Weather service error
+
+  /ai/ask:
+    post:
+      summary: Ask AI question
+      tags:
+        - AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+      responses:
+        '200':
+          description: AI answer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskResponse'
+        '400':
+          description: Bad request
+
+  /health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    RegisterResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+
+    Location:
+      type: object
+      required:
+        - lat
+        - lon
+        - name
+      properties:
+        lat:
+          type: number
+          format: float
+        lon:
+          type: number
+          format: float
+        name:
+          type: string
+
+    CreateTripRequest:
+      type: object
+      required:
+        - location
+        - startDate
+        - endDate
+        - groupSize
+        - experience
+        - activities
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        groupSize:
+          type: integer
+          minimum: 1
+        experience:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+        activities:
+          type: array
+          items:
+            type: string
+
+    CreateTripResponse:
+      type: object
+      properties:
+        id:
+          type: string
+
+    Trip:
+      type: object
+      properties:
+        id:
+          type: string
+        location:
+          $ref: '#/components/schemas/Location'
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        groupSize:
+          type: integer
+        experience:
+          type: string
+        activities:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WeatherResponse:
+      type: object
+      properties:
+        daily:
+          type: array
+          items:
+            type: object
+        alerts:
+          type: array
+          items:
+            type: object
+
+    ChecklistItem:
+      type: object
+      required:
+        - name
+        - qty
+        - reason
+        - recommended
+      properties:
+        name:
+          type: string
+        qty:
+          type: integer
+        reason:
+          type: string
+        recommended:
+          type: boolean
+
+    ChecklistResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChecklistItem'
+
+    AskRequest:
+      type: object
+      required:
+        - question
+      properties:
+        question:
+          type: string
+        tripId:
+          type: string
+        stream:
+          type: boolean
+          default: false
+
+    Citation:
+      type: object
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+        score:
+          type: number
+          format: float
+
+    AskResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        version:
+          type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+

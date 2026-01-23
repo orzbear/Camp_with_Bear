@@ -1,6 +1,14 @@
 import type { paths as ApiPaths } from '../types/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080';
+// Use VITE_API_BASE if set, otherwise use relative path /api (for ALB routing)
+// In production behind ALB, /api/* routes to the API service
+// For local development, set VITE_API_BASE=http://localhost:8080 in .env.local
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+
+// Debug: Log API base URL to verify build-time configuration
+console.log('🔗 [API Client] API_BASE:', API_BASE);
+console.log('🔗 [API Client] VITE_API_BASE env:', import.meta.env.VITE_API_BASE);
+console.log('🔗 [API Client] Using relative path /api for ALB routing:', API_BASE === '/api');
 
 type LoginRequest = ApiPaths['/auth/login']['post']['requestBody']['content']['application/json'];
 type LoginResponse = ApiPaths['/auth/login']['post']['responses']['200']['content']['application/json'];
