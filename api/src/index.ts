@@ -77,16 +77,20 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Routes
+// Routes - Mount all routes under /api prefix for ALB routing
+// ALB routes /api/* to this service, so we need to handle the /api prefix
+app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/me', meRouter);
+app.use('/api/public/campsites', publicCampsitesRouter);
+app.use('/api/geocode', geocodeRouter); // Public geocoding endpoint (no auth required)
+app.use('/api/trips', authMiddleware, tripsRouter);
+app.use('/api/weather', authMiddleware, weatherRouter);
+app.use('/api/checklist', authMiddleware, checklistRouter);
+app.use('/api/footprints', authMiddleware, footprintsRouter);
+
+// Also support root-level routes for direct container access (health checks, etc.)
 app.use('/health', healthRouter);
-app.use('/auth', authRouter);
-app.use('/me', meRouter);
-app.use('/public/campsites', publicCampsitesRouter);
-app.use('/geocode', geocodeRouter); // Public geocoding endpoint (no auth required)
-app.use('/trips', authMiddleware, tripsRouter);
-app.use('/weather', authMiddleware, weatherRouter);
-app.use('/checklist', authMiddleware, checklistRouter);
-app.use('/footprints', authMiddleware, footprintsRouter);
 
 // Connect to database and start server
 async function start() {

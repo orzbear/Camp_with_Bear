@@ -2,6 +2,360 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - CI/CD: Build ARM64 Docker Images in GitHub Actions
+
+### Changed
+- **GitHub Actions Workflow** (`.github/workflows/deploy.yml`):
+  - Added QEMU setup step for ARM64 emulation support
+  - Added Docker Buildx setup step for multi-platform builds
+  - Updated frontend and API build commands to use `docker buildx build --platform linux/arm64`
+  - Changed from `docker build` + `docker push` to `docker buildx build --push` for efficiency
+  - Maintained immutable versioning with `IMAGE_TAG: ${{ github.sha }}`
+
+### Files Modified
+- `.github/workflows/deploy.yml` - Added QEMU/Buildx setup and ARM64 platform flag to build commands
+
+### Benefits
+- **ARM64 Compatibility**: Docker images are now built for ARM64 architecture to match ECS task definitions
+- **Cost Optimization**: Images built for ARM64 work with ARM64 Fargate Spot for maximum cost savings
+- **Build Efficiency**: Using `docker buildx build --push` is more efficient than separate build and push steps
+
+### Technical Details
+- **QEMU**: Enables ARM64 emulation on x86_64 GitHub Actions runners
+- **Docker Buildx**: Provides advanced build features including multi-platform support
+- **Platform Flag**: `--platform linux/arm64` ensures images are built for ARM64 architecture
+- **Immutable Tags**: Still using `${{ github.sha }}` for versioning
+
+## [0.2.4] - ECS Task Definitions: Migrate to ARM64 Architecture
+
+### Changed
+- **ECS Task Definitions** (`infra/envs/dev/ecs_services.tf`):
+  - Added `runtime_platform` block to both API and frontend task definitions
+  - Set `cpu_architecture = "ARM64"` for cost optimization
+  - Set `operating_system_family = "LINUX"` (required for ARM64 on Fargate)
+
+### Files Modified
+- `infra/envs/dev/ecs_services.tf` - Added `runtime_platform` block to both `aws_ecs_task_definition` resources
+
+### Benefits
+- **Cost Savings**: ARM64 (Graviton2) provides up to 20% better price/performance compared to x86_64
+- **Performance**: Better performance per dollar, especially for containerized workloads
+- **Compatibility**: Works seamlessly with Fargate Spot for maximum cost savings
+
+### Important Notes
+- **Docker Images**: Docker images must be built for ARM64 architecture (multi-arch or ARM64-only)
+- **Build Requirements**: Update Dockerfiles to build ARM64 images or use multi-arch builds
+- **Compatibility**: Most Node.js applications work on ARM64 without code changes
+
+## [0.2.3] - ECS Services: Migrate to Fargate Spot for Cost Optimization
+
+### Changed
+- **ECS Services** (`infra/envs/dev/ecs_services.tf`):
+  - Migrated both API and frontend services from `launch_type = "FARGATE"` to Fargate Spot
+  - Removed `launch_type` parameter from both services
+  - Added `capacity_provider_strategy` block with `FARGATE_SPOT` capacity provider
+  - Weight set to 1 for 100% Fargate Spot allocation
+
+### Files Modified
+- `infra/envs/dev/ecs_services.tf` - Updated both `aws_ecs_service` resources (api and frontend)
+
+### Benefits
+- **Cost Savings**: Fargate Spot provides up to 70% discount compared to regular Fargate
+- **Same Functionality**: Fargate Spot provides the same features as regular Fargate
+- **Automatic Failover**: ECS automatically handles Spot interruptions and restarts tasks
+
+### Important Notes
+- **Spot Interruptions**: Fargate Spot tasks can be interrupted with 2 minutes notice when AWS needs capacity
+- **Suitable for Dev**: Perfect for development environments where cost savings outweigh occasional interruptions
+- **Production Consideration**: For production, consider a mixed strategy (e.g., 50% Spot, 50% On-Demand)
+
+## [0.2.2] - ECR Repositories: Enable force_delete for Automation
+
+### Added
+- **ECR Repositories** (`infra/modules/ecr/main.tf`):
+  - Added `force_delete = true` to all ECR repositories (api, frontend, rag)
+  - Ensures `terraform destroy` works even when repositories contain images
+  - Automation-friendly: GitHub Actions can push images without blocking Terraform operations
+
+### Files Modified
+- `infra/modules/ecr/main.tf` - Added `force_delete = true` to `aws_ecr_repository` resource
+
+### Notes
+- **Automation Safety**: Terraform can now destroy ECR repositories even if they contain images pushed by CI/CD
+- **No Data Loss Warning**: `force_delete` will delete all images in the repository when Terraform destroys it
+- **Use Case**: Prevents `terraform destroy` failures when GitHub Actions have pushed new images
+
+## [0.2.1] - Fix: API Dockerfile Build Context Paths
+
+### Fixed
+- **API Dockerfile** (`docker/api/Dockerfile`):
+  - Fixed COPY commands to correctly reference `api/` directory
+  - Changed `COPY package*.json ./` to `COPY api/package*.json ./`
+  - Changed `COPY . .` to `COPY api/ .`
+  - Build context is project root, so paths must include `api/` prefix
+
+### Files Modified
+- `docker/api/Dockerfile` - Updated COPY paths to reference api directory correctly
+
+### Notes
+- **Build Context**: Docker Compose uses project root as build context (`context: ..`)
+- **Path Resolution**: COPY commands must include `api/` prefix since context is root directory
+- **Build Script**: Package.json has `build` script which runs `tsc` (correct)
+
+## [0.2.0] - Fix: API Routes Mounted Under /api Prefix for ALB Routing
+
+### Fixed
+- **API Route Configuration** (`api/src/index.ts`):
+  - Mounted all API routes under `/api` prefix to match ALB routing
+  - Routes now accessible at `/api/health`, `/api/auth`, `/api/footprints`, etc.
+  - Kept root-level `/health` route for target group health checks (bypasses ALB)
+
+### Files Modified
+- `api/src/index.ts` - Updated all route mounts to include `/api` prefix
+
+### Notes
+- **ALB Routing**: ALB routes `/api/*` to API target group, so API must handle `/api` prefix
+- **Health Checks**: Target group health checks use `/health` (direct container access, bypasses ALB)
+- **Backward Compatibility**: Root-level `/health` still works for health checks
+- **Frontend Compatibility**: Frontend already uses `/api/*` paths, so no frontend changes needed
+
+## [0.1.9] - Fix: Frontend Dockerfile Build Context Paths
+
+### Fixed
+- **Frontend Dockerfile** (`docker/frontend/Dockerfile`):
+  - Fixed COPY commands to correctly reference `frontend/` directory
+  - Changed `COPY package*.json ./` to `COPY frontend/package*.json ./`
+  - Changed `COPY . .` to `COPY frontend/ .`
+  - Build context is project root, so paths must include `frontend/` prefix
+
+### Files Modified
+- `docker/frontend/Dockerfile` - Updated COPY paths to reference frontend directory correctly
+
+### Notes
+- **Build Context**: Docker Compose uses project root as build context (`context: ..`)
+- **Path Resolution**: COPY commands must include `frontend/` prefix since context is root directory
+- **Build Script**: Package.json has `build` script which runs `tsc && vite build` (correct)
+
+## [0.1.8] - Fix: Frontend API URL Configuration for ALB
+
+### Fixed
+- **Frontend API Client** (`frontend/src/api/client.ts`):
+  - Changed default API base URL from `http://localhost:8080` to `/api` (relative path)
+  - Frontend now uses ALB routing by default: `/api/*` routes to API service
+  - Still respects `VITE_API_BASE` environment variable if set
+- **Frontend Dockerfile** (`docker/frontend/Dockerfile`):
+  - Changed default `VITE_API_BASE` build argument from `http://localhost:8080` to `/api`
+  - Updated comments to document ALB routing and local dev override
+
+### Files Modified
+- `frontend/src/api/client.ts` - Updated API_BASE default to use relative path `/api`
+- `docker/frontend/Dockerfile` - Changed default VITE_API_BASE build arg to `/api`
+
+### Notes
+- **ALB Routing**: The ALB routes `/api/*` to the API target group, so using `/api` as a relative path works correctly
+- **Local Development**: Developers can override by setting `VITE_API_BASE=http://localhost:8080` in `.env.local` or via Docker build arg
+- **Image Rebuild Required**: Existing Docker images need to be rebuilt with the new default to use ALB routing
+- **No ECS Changes Needed**: The frontend code change means it will work with ALB routing once the image is rebuilt
+
+## [0.1.7] - Fix: API Container CORS Configuration Crash
+
+### Fixed
+- **API Task Definition Environment Variables** (`infra/envs/dev/ecs_services.tf`):
+  - Added `FRONTEND_URL` environment variable with ALB DNS name: `http://${module.alb.alb_dns_name}`
+  - Added `ALLOWED_ORIGINS` environment variable with same ALB DNS name for CORS configuration
+  - Prevents API container from crashing on startup due to missing CORS configuration in production mode
+
+### Files Modified
+- `infra/envs/dev/ecs_services.tf` - Added FRONTEND_URL and ALLOWED_ORIGINS environment variables to API task definition
+
+### Notes
+- **Root Cause**: API container was crashing immediately on startup with error: "CORS configuration error: In production, at least one of ALLOWED_ORIGINS or FRONTEND_URL must be set."
+- **Solution**: Added both environment variables dynamically referencing the ALB DNS name
+- **Dynamic Reference**: Uses `module.alb.alb_dns_name` to automatically get the ALB DNS name at deployment time
+- **CORS Configuration**: Both variables are set to the same value (`http://<alb-dns-name>`) to ensure CORS works correctly
+- After this fix, the API container should start successfully and listen on port 8080
+
+## [0.1.6] - Fix: API Target Group Health Check Path
+
+### Fixed
+- **API Target Group Health Check** (`infra/modules/alb/main.tf`):
+  - Verified and documented health check path is `/health` (not `/api/health`)
+  - Added clarifying comment explaining that health checks hit the container directly, bypassing ALB routing rules
+  - Health check path must match the application's internal route structure
+
+### Files Modified
+- `infra/modules/alb/main.tf` - Added documentation comment for API target group health check path
+
+### Notes
+- **Health Check Path**: The API target group health check uses `/health` because:
+  - Health checks bypass the ALB listener rules and hit the container directly
+  - The API application serves the health endpoint at `/health` (not `/api/health`)
+  - The ALB listener rule routes `/api/*` to the API target group, but this only affects user traffic, not health checks
+- **Target Group Location**: The API target group is defined in `infra/modules/alb/main.tf` (not in `ecs_services.tf`)
+- This ensures the target group shows as "Healthy" in the AWS Console when the API container is running
+
+## [0.1.5] - Fix: ECS Task Definition Secrets ARN Format Validation
+
+### Fixed
+- **API Task Definition Secrets** (`infra/envs/dev/ecs_services.tf`):
+  - Enhanced documentation for secret ARN format requirements
+  - Reformatted secrets array for better readability and validation
+  - Added explicit examples of correct ARN formats for both Secrets Manager and SSM Parameter Store
+  - Clarified that incomplete or incorrectly formatted ARNs will cause ClientException errors
+
+### Files Modified
+- `infra/envs/dev/ecs_services.tf` - Enhanced secret ARN documentation and formatting
+
+### Notes
+- **Secrets Manager ARN Format**: `arn:aws:secretsmanager:region:account-id:secret:secret-name-random-string`
+  - Example: `arn:aws:secretsmanager:ap-southeast-2:149536499524:secret:campmate/dev/api/MONGO_URI-CXSPFf`
+- **SSM Parameter Store ARN Format**: `arn:aws:ssm:region:account-id:parameter/parameter-name`
+  - Example: `arn:aws:ssm:ap-southeast-2:149536499524:parameter/campmate/dev/api/MONGO_URI`
+- **Important**: The `valueFrom` field must contain the complete ARN. Using just the secret name or an incomplete ARN will result in ClientException errors when ECS tries to start tasks.
+- Ensure your `dev.secrets.tfvars` file contains full, valid ARNs for all three secrets (MONGO_URI, JWT_SECRET, OPENWEATHER_API_KEY).
+
+## [0.1.4] - Fix: Target Group ResourceInUse and Secrets ARN Validation
+
+### Fixed
+- **Frontend Target Group** (`infra/modules/alb/main.tf`):
+  - Changed from hardcoded `name` to `name_prefix = "fe-"` to ensure unique names and avoid ResourceInUse errors
+  - Added `lifecycle { create_before_destroy = true }` to prevent resource conflicts during updates
+- **API Task Definition Secrets** (`infra/envs/dev/ecs_services.tf`):
+  - Added documentation comments clarifying that secrets must use full ARNs (not just names)
+  - Verified ARN format requirements for both Secrets Manager and SSM Parameter Store
+
+### Files Modified
+- `infra/modules/alb/main.tf` - Updated frontend target group with name_prefix and lifecycle block
+- `infra/envs/dev/ecs_services.tf` - Added comments documenting secret ARN format requirements
+
+### Notes
+- Target group name_prefix ensures unique names when recreating resources, preventing ResourceInUse errors
+- Lifecycle create_before_destroy ensures new target group is created before old one is destroyed
+- Secret ARNs must be complete: Secrets Manager format includes random suffix, SSM Parameter Store format includes `/parameter/` prefix
+
+## [0.1.3] - Fix: Frontend Port Mismatch (Port 80 → 3000)
+
+### Fixed
+- **Frontend ECS Task Definition** (`infra/envs/dev/ecs_services.tf`):
+  - Changed `containerPort` from 80 to 3000 to match Dockerfile (nginx listens on port 3000)
+  - Updated `container_port` in ECS service load balancer configuration from 80 to 3000
+- **Frontend Target Group** (`infra/modules/alb/main.tf`):
+  - Changed target group port from 80 to 3000
+- **ECS Security Group** (`infra/modules/alb/main.tf`):
+  - Updated ingress rule for frontend from port 80 to 3000
+
+### Files Modified
+- `infra/envs/dev/ecs_services.tf` - Updated frontend containerPort and container_port
+- `infra/modules/alb/main.tf` - Updated frontend target group port and ECS security group ingress rule
+
+### Notes
+- Frontend Dockerfile configures nginx to listen on port 3000, but ECS task definition and target group were configured for port 80, causing health check failures.
+- ALB listener automatically uses the updated target group port (no changes needed).
+
+## [0.1.2] - Stage 2C: ECS/Fargate Services (Dev) — Frontend + API behind ALB (Public Subnets, No NAT)
+
+### Added
+- **ECS Task Definitions** (`infra/envs/dev/ecs_services.tf`):
+  - API task definition (port 8080) with `awslogs` configuration to `/ecs/campmate-dev-api`
+  - Frontend task definition (port 80) with `awslogs` configuration to `/ecs/campmate-dev-frontend`
+- **ECS Services** (`infra/envs/dev/ecs_services.tf`):
+  - `campmate-dev-api` attached to existing `tg-api` (target type `ip`)
+  - `campmate-dev-frontend` attached to existing `tg-frontend` (target type `ip`)
+  - Both services run in **public subnets** with `assign_public_ip = true` (no NAT)
+- **Secrets via ARN inputs** (no plaintext secrets in Terraform state):
+  - Added required variables: `api_mongo_uri_secret_arn`, `api_jwt_secret_arn`, `api_openweather_api_key_arn`
+
+### Outputs
+- `api_service_name`, `frontend_service_name`
+- `task_def_arns` (api + frontend)
+
+### Notes
+- **ALB routing**: `/api/*` is forwarded to the API target group, but the current API image mounts health at `/health` (not `/api/health`). Use `curl http://<alb_dns_name>/health` to validate API health unless the API is updated to mount under `/api`.
+
+## [0.1.1] - Stage 2B: ALB + ECR + ECS Base (Public Subnets, No NAT)
+
+### Added
+- **ECR Repositories** (`infra/modules/ecr`):
+  - 3 repositories: `campmate-api`, `campmate-frontend`, `campmate-rag`
+  - Image scanning enabled on push
+  - Lifecycle policy: keep latest 10 images per repository
+
+- **ECS Cluster** (`infra/modules/ecs_cluster`):
+  - Cluster: `campmate-dev-cluster` with Container Insights enabled
+  - CloudWatch log groups: `/ecs/campmate-dev-api`, `/ecs/campmate-dev-frontend`, `/ecs/campmate-dev-rag`
+  - Log retention: 14 days
+
+- **IAM Roles** (`infra/modules/iam`):
+  - Task execution role: `campmate-dev-ecs-task-execution-role` with `AmazonECSTaskExecutionRolePolicy`
+  - Task role: `campmate-dev-ecs-task-role` (empty policy, ready for secrets)
+
+- **Application Load Balancer** (`infra/modules/alb`):
+  - ALB: `campmate-dev-alb` in public subnets (internet-facing)
+  - Security groups:
+    - `alb_sg`: TCP 80 from 0.0.0.0/0, all outbound
+    - `ecs_sg`: TCP 80/8080 from ALB, all outbound
+  - Target groups:
+    - `tg-frontend`: HTTP port 80, health check `/`
+    - `tg-api`: HTTP port 8080, health check `/health`
+  - Listener rules:
+    - `/api/*` → `tg-api`
+    - Default → `tg-frontend`
+
+### Infrastructure Resources
+- **ECR**: 3 repositories with scanning and lifecycle policies
+- **ECS Cluster**: Ready for Fargate deployment
+- **CloudWatch**: 3 log groups with 14-day retention
+- **IAM**: 2 roles (execution and task)
+- **ALB**: Application Load Balancer with routing rules
+- **Security Groups**: ALB and ECS security groups with proper ingress rules
+
+### Files Created
+- `infra/modules/ecr/main.tf` - ECR module
+- `infra/modules/ecr/variables.tf` - ECR module inputs
+- `infra/modules/ecr/outputs.tf` - ECR module outputs
+- `infra/modules/ecs_cluster/main.tf` - ECS cluster module
+- `infra/modules/ecs_cluster/variables.tf` - ECS cluster module inputs
+- `infra/modules/ecs_cluster/outputs.tf` - ECS cluster module outputs
+- `infra/modules/iam/main.tf` - IAM roles module
+- `infra/modules/iam/variables.tf` - IAM module inputs
+- `infra/modules/iam/outputs.tf` - IAM module outputs
+- `infra/modules/alb/main.tf` - ALB module
+- `infra/modules/alb/variables.tf` - ALB module inputs
+- `infra/modules/alb/outputs.tf` - ALB module outputs
+
+### Files Modified
+- `infra/envs/dev/main.tf` - Added ECR, ECS cluster, IAM, and ALB modules
+- `infra/envs/dev/outputs.tf` - Added ECR, ECS, and ALB outputs
+- `docs/BUILD_LOG.md` - Added Stage 2B documentation
+- `docs/CHANGELOG.md` - Added version 0.1.1 entry
+
+### Outputs
+- `ecr_repo_urls` - Map of ECR repository URLs
+- `ecs_cluster_name` - ECS cluster name
+- `alb_dns_name` - ALB DNS name
+- `alb_sg_id`, `ecs_sg_id` - Security group IDs
+- `tg_frontend_arn`, `tg_api_arn` - Target group ARNs
+
+### Commands
+- `terraform init` - Initialize new modules
+- `terraform fmt -recursive` - Format all Terraform files
+- `terraform validate` - Validate Terraform configuration
+- `terraform plan` - Preview infrastructure changes
+- `terraform apply` - Create infrastructure resources
+
+### Architecture
+- **Deployment Model**: Public subnets with public IPs (no NAT Gateway)
+- **Target Type**: IP (for Fargate tasks)
+- **Routing**: ALB routes `/api/*` to API, default to frontend
+- **Security**: ECS tasks only accept traffic from ALB security group
+
+### Notes
+- **No NAT Gateway**: All ECS tasks use public subnets with public IPs
+- **No ECS Services**: Infrastructure ready, but services not created yet
+- **Cost Optimization**: 14-day log retention, ECR lifecycle policies
+- **Module Structure**: Reusable modules for multi-environment support
+- **Ready for Deployment**: Infrastructure ready for ECS task definitions and services
+
 ## [0.1.0] - Stage 2A: AWS Networking Infrastructure (Terraform)
 
 ### Added
