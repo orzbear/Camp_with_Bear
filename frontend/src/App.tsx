@@ -30,6 +30,7 @@ function App() {
     </AuthProvider>
   );
 }
+// Version 1.0.3 - ARM64 Graviton Optimized + GitHub Actions CD
 
 export default App;
 
