@@ -725,6 +725,362 @@ docker build -f docker/api/Dockerfile -t campmate-api:latest .
 docker-compose -f docker/docker-compose.yml build api
 ```
 
+## Fix: ECR Repositories - Enable force_delete for Automation
+
+### Issue
+Terraform destroy operations can fail when ECR repositories contain images pushed by GitHub Actions or other CI/CD pipelines. AWS requires repositories to be empty before deletion, which blocks automation workflows.
+
+### Solution
+Added `force_delete = true` to all ECR repositories to allow Terraform to delete repositories even when they contain images.
+
+### Files Modified
+- **`infra/modules/ecr/main.tf`**:
+  - Added `force_delete = true` to `aws_ecr_repository` resource
+
+### Changes Made
+```terraform
+resource "aws_ecr_repository" "repos" {
+  for_each = var.repositories
+
+  name                 = each.value
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true  # Added for automation-friendly destroy
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+  # ... rest of config
+}
+```
+
+### Technical Details
+- **Repositories Affected**: All ECR repositories (api, frontend, rag)
+- **Behavior**: When `terraform destroy` runs, ECR repositories will be deleted even if they contain images
+- **Data Loss Warning**: All images in the repository will be permanently deleted when the repository is destroyed
+- **Use Case**: Prevents `terraform destroy` failures when GitHub Actions have pushed new images after Terraform was last applied
+
+### Benefits
+- **Automation-Friendly**: CI/CD pipelines can push images without blocking Terraform operations
+- **Clean Destroy**: `terraform destroy` will always succeed, even with images in repositories
+- **No Manual Cleanup**: No need to manually delete images before destroying infrastructure
+
+### Verification
+After applying this change:
+- `terraform plan` should show no changes (if repositories already exist)
+- `terraform apply` will update existing repositories with `force_delete = true`
+- `terraform destroy` will now succeed even if repositories contain images
+
+### Terraform Commands
+```bash
+cd infra/envs/dev
+terraform fmt -recursive
+terraform validate
+terraform plan
+terraform apply
+```
+
+### Notes
+- **Reversible**: This change only affects destroy operations; normal operations are unchanged
+- **Safe for Production**: `force_delete` only applies during Terraform destroy, not during normal usage
+- **GitHub Actions**: CI/CD pipelines can now push images without worrying about blocking Terraform destroy operations
+
+## Fix: ECS Services - Migrate to Fargate Spot for Cost Optimization
+
+### Goal
+Reduce compute costs by migrating ECS services from regular Fargate to Fargate Spot, which provides up to 70% cost savings.
+
+### Changes Made
+Updated both API and frontend ECS services to use Fargate Spot capacity provider instead of regular Fargate.
+
+### Files Modified
+- **`infra/envs/dev/ecs_services.tf`**:
+  - Removed `launch_type = "FARGATE"` from both services
+  - Added `capacity_provider_strategy` block with `FARGATE_SPOT` to both services
+
+### Code Changes
+
+**Before:**
+```terraform
+resource "aws_ecs_service" "api" {
+  name            = "${var.project}-${var.env}-api"
+  cluster         = module.ecs_cluster.cluster_id
+  task_definition = aws_ecs_task_definition.api.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"  # ← Removed
+  # ... rest of config
+}
+```
+
+**After:**
+```terraform
+resource "aws_ecs_service" "api" {
+  name            = "${var.project}-${var.env}-api"
+  cluster         = module.ecs_cluster.cluster_id
+  task_definition = aws_ecs_task_definition.api.arn
+  desired_count   = 1
+
+  capacity_provider_strategy {  # ← Added
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+  }
+  # ... rest of config
+}
+```
+
+### Technical Details
+- **Capacity Provider**: `FARGATE_SPOT` is a built-in AWS capacity provider (no need to create it)
+- **Weight**: Set to 1 means 100% of tasks will use Fargate Spot
+- **Task Definitions**: No changes needed - task definitions remain compatible
+- **Network Configuration**: Unchanged - still uses public subnets with public IPs
+- **Load Balancer**: Unchanged - services still attached to ALB target groups
+
+### Benefits
+- **Cost Savings**: Up to 70% discount compared to regular Fargate pricing
+- **Same Features**: Fargate Spot provides the same container runtime as regular Fargate
+- **Automatic Recovery**: ECS automatically restarts tasks if interrupted by Spot capacity changes
+- **No Code Changes**: Application code remains unchanged
+
+### Important Considerations
+- **Spot Interruptions**: Fargate Spot tasks can be interrupted with 2 minutes notice when AWS needs capacity
+- **Suitable for Dev**: Perfect for development environments where cost savings outweigh occasional interruptions
+- **Production Strategy**: For production, consider a mixed strategy:
+  ```terraform
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+    base              = 0  # Minimum on-demand tasks
+  }
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE"
+    weight            = 1
+    base              = 1  # At least 1 on-demand task
+  }
+  ```
+
+### Verification
+After applying this change:
+- `terraform plan` should show updates to both ECS services
+- `terraform apply` will update services to use Fargate Spot
+- Services will continue running normally with cost savings
+- Check AWS Console → ECS → Services → Capacity provider tab to verify Fargate Spot usage
+
+### Terraform Commands
+```bash
+cd infra/envs/dev
+terraform fmt -recursive
+terraform validate
+terraform plan
+terraform apply
+```
+
+### Cost Impact
+- **Regular Fargate**: ~$0.04 per vCPU-hour, ~$0.004 per GB-hour
+- **Fargate Spot**: ~$0.012 per vCPU-hour, ~$0.0012 per GB-hour (70% discount)
+- **Example**: For 2 services (256 CPU, 512 MB each) running 24/7:
+  - Regular Fargate: ~$58/month
+  - Fargate Spot: ~$17/month
+  - **Savings: ~$41/month (~70%)**
+
+### Notes
+- **No Downtime**: Terraform will perform a rolling update, maintaining service availability
+- **Task Restarts**: If Spot capacity is interrupted, ECS automatically starts new tasks
+- **Monitoring**: Monitor CloudWatch metrics for task interruptions and restarts
+- **Dev Environment**: This configuration is ideal for dev/test environments
+
+## Fix: ECS Task Definitions - Migrate to ARM64 Architecture
+
+### Goal
+Optimize cost and performance by migrating ECS task definitions to use ARM64 (Graviton2) architecture, which provides better price/performance compared to x86_64.
+
+### Changes Made
+Added `runtime_platform` block to both API and frontend task definitions to specify ARM64 architecture.
+
+### Files Modified
+- **`infra/envs/dev/ecs_services.tf`**:
+  - Added `runtime_platform` block to both `aws_ecs_task_definition` resources (api and frontend)
+
+### Code Changes
+
+**Before:**
+```terraform
+resource "aws_ecs_task_definition" "api" {
+  family                   = "${var.project}-${var.env}-api"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  # No runtime_platform block (defaults to x86_64)
+  # ... rest of config
+}
+```
+
+**After:**
+```terraform
+resource "aws_ecs_task_definition" "api" {
+  family                   = "${var.project}-${var.env}-api"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+
+  runtime_platform {  # ← Added
+    cpu_architecture        = "ARM64"
+    operating_system_family = "LINUX"
+  }
+  # ... rest of config
+}
+```
+
+### Technical Details
+- **CPU Architecture**: `ARM64` uses AWS Graviton2 processors
+- **Operating System**: `LINUX` is required for ARM64 on Fargate
+- **Compatibility**: Works with Fargate Spot for maximum cost savings
+- **Task Definitions**: Both API and frontend task definitions updated
+
+### Benefits
+- **Cost Savings**: Up to 20% better price/performance compared to x86_64
+- **Performance**: Better performance per dollar, especially for containerized workloads
+- **Combined Savings**: When combined with Fargate Spot, total savings can exceed 80% compared to regular Fargate x86_64
+- **Energy Efficiency**: ARM64 processors are more energy-efficient
+
+### Important Requirements
+- **Docker Images**: Docker images must be built for ARM64 architecture
+  - Option 1: Build ARM64-only images
+  - Option 2: Build multi-arch images (ARM64 + x86_64)
+- **Build Process**: Update Docker build commands to target ARM64:
+  ```bash
+  # Build for ARM64
+  docker build --platform linux/arm64 -f docker/api/Dockerfile -t campmate-api:arm64 .
+  
+  # Or build multi-arch
+  docker buildx build --platform linux/arm64,linux/amd64 -f docker/api/Dockerfile -t campmate-api:latest .
+  ```
+- **Base Images**: Ensure base images (e.g., `node:20-alpine`) support ARM64
+- **Native Dependencies**: Some native Node.js modules may need ARM64-compatible builds
+
+### Verification
+After applying this change:
+- `terraform plan` should show updates to both task definitions
+- `terraform apply` will create new task definition revisions with ARM64
+- ECS services will automatically use new task definitions on next deployment
+- Check AWS Console → ECS → Task Definitions → Runtime platform to verify ARM64
+
+### Terraform Commands
+```bash
+cd infra/envs/dev
+terraform fmt -recursive
+terraform validate
+terraform plan
+terraform apply
+```
+
+### Cost Impact
+- **x86_64 Fargate Spot**: ~$0.012 per vCPU-hour, ~$0.0012 per GB-hour
+- **ARM64 Fargate Spot**: ~$0.0096 per vCPU-hour, ~$0.00096 per GB-hour (20% discount)
+- **Example**: For 2 services (256 CPU, 512 MB each) running 24/7:
+  - x86_64 Fargate Spot: ~$17/month
+  - ARM64 Fargate Spot: ~$14/month
+  - **Additional Savings: ~$3/month (~18%)**
+  - **Total Savings vs Regular Fargate x86_64: ~$44/month (~76%)**
+
+### Next Steps
+1. **Update Docker Builds**: Ensure Docker images are built for ARM64
+2. **Test Locally**: Test ARM64 images locally using Docker buildx or QEMU emulation
+3. **Update CI/CD**: Update GitHub Actions or CI/CD pipelines to build ARM64 images
+4. **Deploy**: Apply Terraform changes and rebuild/redeploy Docker images
+
+### Notes
+- **Compatibility**: Most Node.js applications work on ARM64 without code changes
+- **Native Modules**: Some native Node.js modules may need to be rebuilt for ARM64
+- **Testing**: Test thoroughly before deploying to production
+- **Rollback**: Can revert to x86_64 by removing `runtime_platform` block if needed
+
+## Fix: CI/CD - Build ARM64 Docker Images in GitHub Actions
+
+### Goal
+Update GitHub Actions workflow to build ARM64 Docker images that match the ARM64 ECS task definitions, enabling cost optimization with ARM64 Fargate Spot.
+
+### Changes Made
+Updated the deployment workflow to set up QEMU and Docker Buildx, and modified build commands to target ARM64 architecture.
+
+### Files Modified
+- **`.github/workflows/deploy.yml`**:
+  - Added QEMU setup step for ARM64 emulation
+  - Added Docker Buildx setup step for multi-platform builds
+  - Updated frontend and API build commands to use `docker buildx build --platform linux/arm64`
+
+### Code Changes
+
+**Before:**
+```yaml
+- name: Login to Amazon ECR
+  id: login-ecr
+  uses: aws-actions/amazon-ecr-login@v2
+
+- name: Build and Push Frontend
+  env:
+    ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    IMAGE_TAG: ${{ github.sha }}
+  run: |
+    docker build -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG -f docker/frontend/Dockerfile .
+    docker push $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG
+```
+
+**After:**
+```yaml
+- name: Set up QEMU
+  uses: docker/setup-qemu-action@v3
+
+- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@v3
+
+- name: Login to Amazon ECR
+  id: login-ecr
+  uses: aws-actions/amazon-ecr-login@v2
+
+- name: Build and Push Frontend
+  env:
+    ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    IMAGE_TAG: ${{ github.sha }}
+  run: |
+    docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG -f docker/frontend/Dockerfile --push .
+```
+
+### Technical Details
+- **QEMU Setup**: `docker/setup-qemu-action@v3` enables ARM64 emulation on x86_64 GitHub Actions runners
+- **Docker Buildx**: `docker/setup-buildx-action@v3` provides advanced build features including multi-platform support
+- **Platform Flag**: `--platform linux/arm64` ensures images are built specifically for ARM64 architecture
+- **Build and Push**: Using `docker buildx build --push` combines build and push in a single command for efficiency
+- **Immutable Versioning**: Still using `IMAGE_TAG: ${{ github.sha }}` for versioning
+
+### Benefits
+- **ARM64 Compatibility**: Docker images are now built for ARM64 to match ECS task definitions
+- **Cost Optimization**: ARM64 images work with ARM64 Fargate Spot for maximum cost savings
+- **Build Efficiency**: `docker buildx build --push` is more efficient than separate build and push steps
+- **Automation**: CI/CD automatically builds ARM64 images on every deployment
+
+### Verification
+After this change:
+- GitHub Actions workflow will build ARM64 images on push to main branch
+- Images will be pushed to ECR with ARM64 architecture
+- ECS services will use ARM64 images matching the task definition runtime platform
+- Check ECR console → Images → Architecture to verify ARM64
+
+### Workflow Steps
+1. **Checkout Code**: Gets the latest code
+2. **Configure AWS Credentials**: Sets up AWS authentication
+3. **Set up QEMU**: Enables ARM64 emulation
+4. **Set up Docker Buildx**: Enables multi-platform builds
+5. **Login to ECR**: Authenticates with Amazon ECR
+6. **Build and Push**: Builds ARM64 images and pushes to ECR
+7. **Update ECS Services**: Forces new deployment with updated images
+
+### Notes
+- **Build Time**: ARM64 emulation may slightly increase build time compared to native x86_64 builds
+- **Base Images**: Ensure base images (e.g., `node:20-alpine`) support ARM64 (most official images do)
+- **Native Dependencies**: Some native Node.js modules may need ARM64-compatible builds
+- **Testing**: Test the workflow on a branch before merging to main
+
 ## Stage 2A: AWS Networking Infrastructure (Terraform)
 
 ### Goal

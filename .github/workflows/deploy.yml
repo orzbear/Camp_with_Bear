@@ -34,6 +34,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -44,8 +50,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG -f docker/frontend/Dockerfile .
-          docker push $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG
+          docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG -f docker/frontend/Dockerfile --push .
           echo "frontend_image=$ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Update ECS Frontend Service
@@ -58,8 +63,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/${{ env.ECR_API_REPO }}:$IMAGE_TAG -f docker/api/Dockerfile .
-          docker push $ECR_REGISTRY/${{ env.ECR_API_REPO }}:$IMAGE_TAG
+          docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/${{ env.ECR_API_REPO }}:$IMAGE_TAG -f docker/api/Dockerfile --push .
 
       - name: Update ECS API Service
         run: |

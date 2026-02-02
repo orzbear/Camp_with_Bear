@@ -15,6 +15,11 @@ resource "aws_ecs_task_definition" "api" {
   cpu                      = "256"
   memory                   = "512"
 
+  runtime_platform {
+    cpu_architecture        = "ARM64"
+    operating_system_family = "LINUX"
+  }
+
   execution_role_arn = module.iam.task_execution_role_arn
   task_role_arn      = module.iam.task_role_arn
 
@@ -80,6 +85,11 @@ resource "aws_ecs_task_definition" "frontend" {
   cpu                      = "256"
   memory                   = "512"
 
+  runtime_platform {
+    cpu_architecture        = "ARM64"
+    operating_system_family = "LINUX"
+  }
+
   execution_role_arn = module.iam.task_execution_role_arn
   task_role_arn      = module.iam.task_role_arn
 
@@ -115,7 +125,11 @@ resource "aws_ecs_service" "api" {
   cluster         = module.ecs_cluster.cluster_id
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = 1
-  launch_type     = "FARGATE"
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+  }
 
   enable_execute_command = true
 
@@ -144,7 +158,11 @@ resource "aws_ecs_service" "frontend" {
   cluster         = module.ecs_cluster.cluster_id
   task_definition = aws_ecs_task_definition.frontend.arn
   desired_count   = 1
-  launch_type     = "FARGATE"
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+  }
 
   enable_execute_command = true
 

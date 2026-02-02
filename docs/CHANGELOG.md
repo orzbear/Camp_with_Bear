@@ -2,6 +2,89 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - CI/CD: Build ARM64 Docker Images in GitHub Actions
+
+### Changed
+- **GitHub Actions Workflow** (`.github/workflows/deploy.yml`):
+  - Added QEMU setup step for ARM64 emulation support
+  - Added Docker Buildx setup step for multi-platform builds
+  - Updated frontend and API build commands to use `docker buildx build --platform linux/arm64`
+  - Changed from `docker build` + `docker push` to `docker buildx build --push` for efficiency
+  - Maintained immutable versioning with `IMAGE_TAG: ${{ github.sha }}`
+
+### Files Modified
+- `.github/workflows/deploy.yml` - Added QEMU/Buildx setup and ARM64 platform flag to build commands
+
+### Benefits
+- **ARM64 Compatibility**: Docker images are now built for ARM64 architecture to match ECS task definitions
+- **Cost Optimization**: Images built for ARM64 work with ARM64 Fargate Spot for maximum cost savings
+- **Build Efficiency**: Using `docker buildx build --push` is more efficient than separate build and push steps
+
+### Technical Details
+- **QEMU**: Enables ARM64 emulation on x86_64 GitHub Actions runners
+- **Docker Buildx**: Provides advanced build features including multi-platform support
+- **Platform Flag**: `--platform linux/arm64` ensures images are built for ARM64 architecture
+- **Immutable Tags**: Still using `${{ github.sha }}` for versioning
+
+## [0.2.4] - ECS Task Definitions: Migrate to ARM64 Architecture
+
+### Changed
+- **ECS Task Definitions** (`infra/envs/dev/ecs_services.tf`):
+  - Added `runtime_platform` block to both API and frontend task definitions
+  - Set `cpu_architecture = "ARM64"` for cost optimization
+  - Set `operating_system_family = "LINUX"` (required for ARM64 on Fargate)
+
+### Files Modified
+- `infra/envs/dev/ecs_services.tf` - Added `runtime_platform` block to both `aws_ecs_task_definition` resources
+
+### Benefits
+- **Cost Savings**: ARM64 (Graviton2) provides up to 20% better price/performance compared to x86_64
+- **Performance**: Better performance per dollar, especially for containerized workloads
+- **Compatibility**: Works seamlessly with Fargate Spot for maximum cost savings
+
+### Important Notes
+- **Docker Images**: Docker images must be built for ARM64 architecture (multi-arch or ARM64-only)
+- **Build Requirements**: Update Dockerfiles to build ARM64 images or use multi-arch builds
+- **Compatibility**: Most Node.js applications work on ARM64 without code changes
+
+## [0.2.3] - ECS Services: Migrate to Fargate Spot for Cost Optimization
+
+### Changed
+- **ECS Services** (`infra/envs/dev/ecs_services.tf`):
+  - Migrated both API and frontend services from `launch_type = "FARGATE"` to Fargate Spot
+  - Removed `launch_type` parameter from both services
+  - Added `capacity_provider_strategy` block with `FARGATE_SPOT` capacity provider
+  - Weight set to 1 for 100% Fargate Spot allocation
+
+### Files Modified
+- `infra/envs/dev/ecs_services.tf` - Updated both `aws_ecs_service` resources (api and frontend)
+
+### Benefits
+- **Cost Savings**: Fargate Spot provides up to 70% discount compared to regular Fargate
+- **Same Functionality**: Fargate Spot provides the same features as regular Fargate
+- **Automatic Failover**: ECS automatically handles Spot interruptions and restarts tasks
+
+### Important Notes
+- **Spot Interruptions**: Fargate Spot tasks can be interrupted with 2 minutes notice when AWS needs capacity
+- **Suitable for Dev**: Perfect for development environments where cost savings outweigh occasional interruptions
+- **Production Consideration**: For production, consider a mixed strategy (e.g., 50% Spot, 50% On-Demand)
+
+## [0.2.2] - ECR Repositories: Enable force_delete for Automation
+
+### Added
+- **ECR Repositories** (`infra/modules/ecr/main.tf`):
+  - Added `force_delete = true` to all ECR repositories (api, frontend, rag)
+  - Ensures `terraform destroy` works even when repositories contain images
+  - Automation-friendly: GitHub Actions can push images without blocking Terraform operations
+
+### Files Modified
+- `infra/modules/ecr/main.tf` - Added `force_delete = true` to `aws_ecr_repository` resource
+
+### Notes
+- **Automation Safety**: Terraform can now destroy ECR repositories even if they contain images pushed by CI/CD
+- **No Data Loss Warning**: `force_delete` will delete all images in the repository when Terraform destroys it
+- **Use Case**: Prevents `terraform destroy` failures when GitHub Actions have pushed new images
+
 ## [0.2.1] - Fix: API Dockerfile Build Context Paths
 
 ### Fixed
