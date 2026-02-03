@@ -186,3 +186,12 @@ resource "aws_ecs_service" "frontend" {
   tags = local.common_tags
 }
 
+resource "aws_ecs_cluster" "main" {
+  name = "campmate-dev-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+}
+
