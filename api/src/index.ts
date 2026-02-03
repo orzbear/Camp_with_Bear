@@ -102,9 +102,14 @@ async function start() {
       await seedCampsites();
     }
     
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`CampMate API server running on port ${PORT}`);
     });
+
+    // Set keepAliveTimeout to 65000ms (slightly higher than ALB's 60s default)
+    // This prevents the target from closing connections prematurely
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000; // Should be slightly higher than keepAliveTimeout
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

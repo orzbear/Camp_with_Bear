@@ -69,6 +69,15 @@ resource "aws_security_group" "ecs" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Explicit HTTPS egress rule for external API calls (Nominatim, etc.)
+  egress {
+    description = "HTTPS to internet (for external APIs like Nominatim)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = merge(
     var.tags,
     {

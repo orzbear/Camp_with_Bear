@@ -57,9 +57,9 @@ resource "aws_ecs_task_definition" "api" {
       #   Example: arn:aws:ssm:ap-southeast-2:149536499524:parameter/campmate/dev/api/MONGO_URI
       # IMPORTANT: The ARN must be the complete, valid ARN. ECS validates the ARN format.
       # The execution_role_arn (above) must have permissions to access these secrets.
-secrets = [
+      secrets = [
         {
-          name      = "MONGO_URI"
+          name = "MONGO_URI"
           # trimspace removes any accidental hidden spaces from your paste
           valueFrom = trimspace(var.api_mongo_uri_secret_arn)
         },
