@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] - CI/CD: Use Environment Variables for Terraform Secrets
+
+### Changed
+- **GitHub Actions Workflow** (`.github/workflows/cloud_lifecycle.yml`):
+  - Updated "Execute Lifecycle Task" step to use environment variables for secrets instead of `dev.secrets.tfvars` file
+  - Added `env:` block mapping GitHub secrets to `TF_VAR_` variables
+  - Removed `-var-file="dev.secrets.tfvars"` flag from `terraform apply` and `terraform destroy` commands
+
+### Files Modified
+- `.github/workflows/cloud_lifecycle.yml` - Added `env:` block with `TF_VAR_` mappings and removed `-var-file` flags
+
+### Benefits
+- **Security**: Secrets are now stored in GitHub Secrets instead of committed tfvars files
+- **CI/CD Friendly**: No need to manage tfvars files in the repository
+- **Standard Practice**: Using environment variables is the recommended approach for CI/CD pipelines
+- **Flexibility**: Secrets can be updated in GitHub without modifying code
+
+### Technical Details
+- **Environment Variables**: Terraform automatically reads environment variables prefixed with `TF_VAR_`
+- **Variable Mapping**: GitHub secrets are mapped to `TF_VAR_` variables:
+  - `TF_VAR_api_mongo_uri_secret_arn` from `secrets.API_MONGO_URI_SECRET_ARN`
+  - `TF_VAR_api_jwt_secret_arn` from `secrets.API_JWT_SECRET_ARN`
+  - `TF_VAR_api_openweather_api_key_arn` from `secrets.API_OPENWEATHER_API_KEY_ARN`
+- **No File Dependency**: Removed dependency on `dev.secrets.tfvars` file in CI/CD
+
+### Required GitHub Secrets
+The following secrets must be configured in GitHub repository settings:
+- `API_MONGO_URI_SECRET_ARN` - ARN of Secrets Manager secret for MONGO_URI
+- `API_JWT_SECRET_ARN` - ARN of Secrets Manager secret for JWT_SECRET
+- `API_OPENWEATHER_API_KEY_ARN` - ARN of Secrets Manager secret for OPENWEATHER_API_KEY
+
+### Notes
+- **Local Development**: `dev.secrets.tfvars` can still be used for local development
+- **CI/CD Only**: This change only affects the GitHub Actions workflow, not local Terraform usage
+- **Secret Format**: Secrets should contain full ARNs (e.g., `arn:aws:secretsmanager:ap-southeast-2:149536499524:secret:...`)
+
 ## [0.2.6] - CI/CD: Dual Tagging for ECS Image Discovery
 
 ### Changed
