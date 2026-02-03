@@ -3,6 +3,11 @@ output "alb_dns_name" {
   value       = aws_lb.main.dns_name
 }
 
+output "alb_zone_id" {
+  description = "The canonical hosted zone ID of the load balancer (to be used in a Route 53 Alias record)"
+  value       = aws_lb.main.zone_id
+}
+
 output "alb_arn" {
   description = "ARN of the Application Load Balancer"
   value       = aws_lb.main.arn

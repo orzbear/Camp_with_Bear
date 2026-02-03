@@ -8,9 +8,17 @@ resource "aws_security_group" "alb" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "HTTP from anywhere"
+    description = "HTTP from anywhere (redirects to HTTPS)"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS from anywhere"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -154,11 +162,35 @@ resource "aws_lb_target_group" "api" {
   )
 }
 
-# ALB Listener (port 80)
-resource "aws_lb_listener" "main" {
+# ALB Listener for HTTP (Port 80) - Redirects to HTTPS
+# Note: This replaces the old aws_lb_listener.main resource
+resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ALB Listener for HTTPS (Port 443) - Forwards to frontend by default
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
 
   default_action {
     type             = "forward"
@@ -166,9 +198,9 @@ resource "aws_lb_listener" "main" {
   }
 }
 
-# Listener Rule: /api/* -> API target group
+# Listener Rule: /api/* -> API target group (on HTTPS listener)
 resource "aws_lb_listener_rule" "api" {
-  listener_arn = aws_lb_listener.main.arn
+  listener_arn = aws_lb_listener.https.arn
   priority     = 100
 
   action {

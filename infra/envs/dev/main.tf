@@ -81,5 +81,7 @@ module "alb" {
   vpc_id            = module.network.vpc_id
   public_subnet_ids = module.network.public_subnet_ids
 
-  tags = local.common_tags
+  tags            = local.common_tags
+  certificate_arn = aws_acm_certificate.cert.arn
 }
+

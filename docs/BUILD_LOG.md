@@ -1245,6 +1245,164 @@ After this change:
 - **Secret Rotation**: Secrets can be rotated in GitHub Secrets without code changes
 - **Backward Compatibility**: Local `terraform` commands can still use `-var-file="dev.secrets.tfvars"` if needed
 
+## Fix: Architecture - ALB Listeners and ECS Secrets Configuration
+
+### Goal
+Fix architectural errors in the ALB module and ECS task definition:
+1. Remove duplicate ALB listener and properly separate HTTP (redirect) and HTTPS (forward) listeners
+2. Ensure ECS task definition secrets are correctly configured with proper execution role permissions
+
+### Changes Made
+
+#### ALB Module (`infra/modules/alb/main.tf`)
+1. **Removed Duplicate Listener**: Removed `aws_lb_listener.main` resource that was conflicting with the HTTP/HTTPS listeners
+2. **HTTP Listener (Port 80)**: Configured as type `redirect` with HTTP_301 status code, redirecting to HTTPS port 443
+3. **HTTPS Listener (Port 443)**: Configured as type `forward` with certificate ARN, forwarding to frontend target group by default
+4. **Listener Rule**: Updated `/api/*` listener rule to reference HTTPS listener instead of removed HTTP listener
+5. **Security Group**: Added HTTPS ingress rule (port 443) to ALB security group
+6. **SSL Policy**: Updated to `ELBSecurityPolicy-TLS13-1-2-2021-06` for better security
+
+#### ECS Task Definition (`infra/envs/dev/ecs_services.tf`)
+1. **Documentation**: Enhanced comments explaining execution role permissions for secrets
+2. **Secrets Configuration**: Confirmed secrets use `valueFrom` with full ARNs from Terraform variables
+3. **Execution Role**: Verified `execution_role_arn` is correctly set to `module.iam.task_execution_role_arn`
+
+### Code Changes
+
+**ALB Module - Before:**
+```terraform
+# Duplicate listener
+resource "aws_lb_listener" "main" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "80"
+  protocol          = "HTTP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.frontend.arn
+  }
+}
+
+resource "aws_lb_listener_rule" "api" {
+  listener_arn = aws_lb_listener.main.arn  # Wrong reference
+  # ...
+}
+```
+
+**ALB Module - After:**
+```terraform
+# HTTP Listener - Redirects to HTTPS
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "80"
+  protocol          = "HTTP"
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# HTTPS Listener - Forwards to frontend
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.frontend.arn
+  }
+}
+
+# Listener Rule - Routes /api/* to API on HTTPS listener
+resource "aws_lb_listener_rule" "api" {
+  listener_arn = aws_lb_listener.https.arn  # Correct reference
+  priority     = 100
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
+  }
+}
+```
+
+**ECS Task Definition - Enhanced Documentation:**
+```terraform
+# Execution role must have permissions to pull secrets from Secrets Manager/SSM
+# The AmazonECSTaskExecutionRolePolicy includes:
+# - secretsmanager:GetSecretValue
+# - ssm:GetParameters
+# - ssm:GetParameter
+execution_role_arn = module.iam.task_execution_role_arn
+
+# Secrets injection: ECS will pull these secrets at runtime using the execution role
+# The valueFrom field must contain the full ARN of the secret (not just the name)
+secrets = [
+  {
+    name      = "MONGO_URI"
+    valueFrom = var.api_mongo_uri_secret_arn
+  },
+  {
+    name      = "JWT_SECRET"
+    valueFrom = var.api_jwt_secret_arn
+  },
+  {
+    name      = "OPENWEATHER_API_KEY"
+    valueFrom = var.api_openweather_api_key_arn
+  }
+]
+```
+
+### Technical Details
+- **HTTP Listener**: Type `redirect`, no target group, redirects all HTTP traffic to HTTPS
+- **HTTPS Listener**: Type `forward`, uses certificate ARN, forwards to frontend by default
+- **Listener Rule**: Routes `/api/*` path pattern to API target group on HTTPS listener
+- **Execution Role**: `AmazonECSTaskExecutionRolePolicy` provides:
+  - `secretsmanager:GetSecretValue` for Secrets Manager secrets
+  - `ssm:GetParameters` and `ssm:GetParameter` for SSM Parameter Store
+- **Secrets**: Use `valueFrom` with full ARNs from Terraform variables
+- **Security Group**: ALB security group now allows both HTTP (80) and HTTPS (443) traffic
+
+### Benefits
+- **Security**: All HTTP traffic is automatically redirected to HTTPS
+- **Best Practice**: Proper separation of HTTP redirect and HTTPS forwarding
+- **SSL/TLS**: Modern SSL policy for better security
+- **Clarity**: Clear documentation of execution role permissions for secrets
+- **Architecture**: Correct listener configuration following AWS best practices
+
+### Verification
+After applying these changes:
+- `terraform validate` should pass
+- `terraform plan` should show listener updates
+- HTTP requests to ALB should redirect to HTTPS
+- HTTPS requests should forward to frontend by default
+- `/api/*` requests should route to API target group
+- ECS tasks should start successfully with secrets from Secrets Manager/SSM
+
+### Commands
+```bash
+cd infra/envs/dev
+terraform fmt -recursive
+terraform validate
+terraform plan -var-file=dev.secrets.tfvars
+terraform apply -var-file=dev.secrets.tfvars
+```
+
+### Notes
+- **SSL Certificate**: HTTPS listener requires `certificate_arn` variable (from ACM)
+- **Security Group**: ALB security group must allow both HTTP (80) and HTTPS (443) traffic
+- **Execution Role**: The `AmazonECSTaskExecutionRolePolicy` managed policy includes all necessary permissions for secrets
+- **Secrets ARN Format**: Must be full ARNs (e.g., `arn:aws:secretsmanager:region:account-id:secret:secret-name-random-string`)
+- **Backward Compatibility**: Existing ALB DNS name and target groups remain unchanged
+
 ## Stage 2A: AWS Networking Infrastructure (Terraform)
 
 ### Goal

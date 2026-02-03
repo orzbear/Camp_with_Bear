@@ -20,6 +20,11 @@ resource "aws_ecs_task_definition" "api" {
     operating_system_family = "LINUX"
   }
 
+  # Execution role must have permissions to pull secrets from Secrets Manager/SSM
+  # The AmazonECSTaskExecutionRolePolicy includes:
+  # - secretsmanager:GetSecretValue
+  # - ssm:GetParameters
+  # - ssm:GetParameter
   execution_role_arn = module.iam.task_execution_role_arn
   task_role_arn      = module.iam.task_role_arn
 
@@ -43,24 +48,28 @@ resource "aws_ecs_task_definition" "api" {
         { name = "ALLOWED_ORIGINS", value = "http://${module.alb.alb_dns_name}" }
       ]
 
-      # Secrets must use full ARNs (not just names or parameter names)
-      # For Secrets Manager: arn:aws:secretsmanager:region:account-id:secret:secret-name-random-string
+      # Secrets injection: ECS will pull these secrets at runtime using the execution role
+      # For Secrets Manager: Use the full ARN including the random suffix
+      #   Format: arn:aws:secretsmanager:region:account-id:secret:secret-name-random-string
       #   Example: arn:aws:secretsmanager:ap-southeast-2:149536499524:secret:campmate/dev/api/MONGO_URI-CXSPFf
-      # For SSM Parameter Store: arn:aws:ssm:region:account-id:parameter/parameter-name
+      # For SSM Parameter Store: Use the full ARN
+      #   Format: arn:aws:ssm:region:account-id:parameter/parameter-name
       #   Example: arn:aws:ssm:ap-southeast-2:149536499524:parameter/campmate/dev/api/MONGO_URI
-      # IMPORTANT: The ARN must be complete and valid. ECS will fail with ClientException if the ARN format is incorrect.
-      secrets = [
+      # IMPORTANT: The ARN must be the complete, valid ARN. ECS validates the ARN format.
+      # The execution_role_arn (above) must have permissions to access these secrets.
+secrets = [
         {
           name      = "MONGO_URI"
-          valueFrom = var.api_mongo_uri_secret_arn
+          # trimspace removes any accidental hidden spaces from your paste
+          valueFrom = trimspace(var.api_mongo_uri_secret_arn)
         },
         {
           name      = "JWT_SECRET"
-          valueFrom = var.api_jwt_secret_arn
+          valueFrom = trimspace(var.api_jwt_secret_arn)
         },
         {
           name      = "OPENWEATHER_API_KEY"
-          valueFrom = var.api_openweather_api_key_arn
+          valueFrom = trimspace(var.api_openweather_api_key_arn)
         }
       ]
 
