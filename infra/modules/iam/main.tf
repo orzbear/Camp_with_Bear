@@ -56,3 +56,23 @@ resource "aws_iam_role" "task" {
     }
   )
 }
+
+resource "aws_iam_role_policy" "ecs_secrets_policy" {
+  name = "campmate-dev-secrets-access"
+  role = aws_iam_role.task_execution.id # Ensure this matches your role resource name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "secretsmanager:GetSecretValue"
+        Resource = [
+          "arn:aws:secretsmanager:ap-southeast-2:149536499524:secret:campmate/dev/api/MONGO_URI-CXSPFf",
+          "arn:aws:secretsmanager:ap-southeast-2:149536499524:secret:campmate/dev/api/JWT_SECRET-*",
+          "arn:aws:secretsmanager:ap-southeast-2:149536499524:secret:campmate/dev/api/OPENWEATHER_API_KEY-*"
+        ]
+      }
+    ]
+  })
+}
