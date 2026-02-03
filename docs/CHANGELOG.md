@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.8] - Architecture Fix: ALB Listeners and ECS Secrets Configuration
+
+### Fixed
+- **ALB Module** (`infra/modules/alb/main.tf`):
+  - Removed duplicate `aws_lb_listener.main` resource
+  - Separated HTTP (port 80) and HTTPS (port 443) listeners
+  - HTTP listener now redirects to HTTPS with HTTP_301 status code
+  - HTTPS listener forwards to frontend target group by default
+  - Updated listener rule for `/api/*` to reference HTTPS listener
+  - Added HTTPS ingress rule (port 443) to ALB security group
+  - Updated SSL policy to `ELBSecurityPolicy-TLS13-1-2-2021-06`
+
+- **ECS Task Definition** (`infra/envs/dev/ecs_services.tf`):
+  - Enhanced documentation for execution role permissions
+  - Clarified that secrets use `valueFrom` with full ARNs from variables
+  - Added comments explaining execution role must have Secrets Manager/SSM permissions
+  - Confirmed execution_role_arn is correctly set to `module.iam.task_execution_role_arn`
+
+### Files Modified
+- `infra/modules/alb/main.tf` - Removed duplicate listener, separated HTTP/HTTPS listeners, updated listener rule
+- `infra/envs/dev/ecs_services.tf` - Enhanced documentation for secrets and execution role
+
+### Benefits
+- **Security**: HTTP traffic is automatically redirected to HTTPS
+- **Best Practice**: Separate listeners for HTTP and HTTPS with proper SSL/TLS configuration
+- **Clarity**: Clear separation of concerns between HTTP redirect and HTTPS forwarding
+- **Documentation**: Better documentation of execution role permissions for secrets
+
+### Technical Details
+- **HTTP Listener (Port 80)**: Type `redirect`, redirects to HTTPS port 443 with HTTP_301 status code
+- **HTTPS Listener (Port 443)**: Type `forward`, uses certificate ARN, forwards to frontend by default
+- **Listener Rule**: `/api/*` path pattern routes to API target group on HTTPS listener
+- **Execution Role**: `AmazonECSTaskExecutionRolePolicy` includes `secretsmanager:GetSecretValue` and `ssm:GetParameter` permissions
+- **Secrets**: Use `valueFrom` with full ARNs from Terraform variables (`var.api_mongo_uri_secret_arn`, etc.)
+
+### Notes
+- **SSL Certificate**: HTTPS listener requires `certificate_arn` variable (from ACM)
+- **Security Group**: ALB security group now allows both HTTP (80) and HTTPS (443) traffic
+- **Backward Compatibility**: Existing ALB DNS name and target groups remain unchanged
+- **Secrets**: Execution role permissions are provided by AWS managed policy `AmazonECSTaskExecutionRolePolicy`
+
 ## [0.2.7] - CI/CD: Use Environment Variables for Terraform Secrets
 
 ### Changed

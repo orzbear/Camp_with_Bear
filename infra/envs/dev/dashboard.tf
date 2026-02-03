@@ -12,8 +12,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ECS", "CPUUtilization", "ServiceName", "campmate-dev-api", "ClusterName", "campmate-dev-cluster" ],
-            [ "...", "campmate-dev-frontend", ".", "." ]
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "campmate-dev-api", "ClusterName", "campmate-dev-cluster"],
+            ["...", "campmate-dev-frontend", ".", "."]
           ]
           period = 300
           stat   = "Average"
@@ -30,8 +30,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ECS", "MemoryUtilization", "ServiceName", "campmate-dev-api", "ClusterName", "campmate-dev-cluster" ],
-            [ "...", "campmate-dev-frontend", ".", "." ]
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", "campmate-dev-api", "ClusterName", "campmate-dev-cluster"],
+            ["...", "campmate-dev-frontend", ".", "."]
           ]
           period = 300
           stat   = "Average"
@@ -47,10 +47,10 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 24
         height = 6
         properties = {
-          region  = "ap-southeast-2"
-          title   = "API Application Logs"
-          query   = "SOURCE '/ecs/campmate-dev-api' | fields @timestamp, @message | sort @timestamp desc | limit 20"
-          view    = "table"
+          region = "ap-southeast-2"
+          title  = "API Application Logs"
+          query  = "SOURCE '/ecs/campmate-dev-api' | fields @timestamp, @message | sort @timestamp desc | limit 20"
+          view   = "table"
         }
       }
     ]

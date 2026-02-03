@@ -23,3 +23,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate from ACM"
+  type        = string
+}
