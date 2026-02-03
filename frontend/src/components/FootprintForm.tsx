@@ -104,7 +104,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
       } finally {
         setIsSearching(false);
       }
-    }, 300);
+    }, 1000); // Increased to 1000ms to respect Nominatim's 1 request/second rate limit
 
     return () => {
       if (searchTimeoutRef.current) {
