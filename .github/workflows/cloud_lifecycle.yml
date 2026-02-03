@@ -27,14 +27,18 @@ jobs:
 
       # LOGIC: If it is Midnight (13:00 UTC), Destroy. If it is Morning (21:00 UTC), Apply.
       - name: Execute Lifecycle Task
+        env:
+          TF_VAR_api_mongo_uri_secret_arn: ${{ secrets.API_MONGO_URI_SECRET_ARN }}
+          TF_VAR_api_jwt_secret_arn: ${{ secrets.API_JWT_SECRET_ARN }}
+          TF_VAR_api_openweather_api_key_arn: ${{ secrets.API_OPENWEATHER_API_KEY_ARN }}
         run: |
           cd infra/envs/dev
           terraform init
           
           if [ "${{ github.event.schedule }}" == "0 13 * * *" ]; then
             echo "Bedtime! Destroying infrastructure..."
-            terraform destroy -auto-approve -var-file="dev.secrets.tfvars"
+            terraform destroy -auto-approve
           else
             echo "Wake up! Provisioning infrastructure..."
-            terraform apply -auto-approve -var-file="dev.secrets.tfvars"
+            terraform apply -auto-approve
           fi

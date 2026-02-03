@@ -1153,6 +1153,98 @@ After this change:
 - **ECS Task Definitions**: Can be configured to use either `latest` or a specific SHA tag
 - **Best Practice**: For production, consider using SHA tags for reproducibility, but `latest` is useful for dev environments
 
+## Fix: CI/CD - Use Environment Variables for Terraform Secrets
+
+### Goal
+Update the cloud lifecycle workflow to use GitHub Secrets via environment variables instead of a committed `dev.secrets.tfvars` file, improving security and CI/CD best practices.
+
+### Changes Made
+Updated the "Execute Lifecycle Task" step in the cloud lifecycle workflow to use environment variables for Terraform secrets, removing the dependency on `dev.secrets.tfvars` file.
+
+### Files Modified
+- **`.github/workflows/cloud_lifecycle.yml`**:
+  - Added `env:` block mapping GitHub secrets to `TF_VAR_` variables
+  - Removed `-var-file="dev.secrets.tfvars"` flag from `terraform apply` and `terraform destroy` commands
+
+### Code Changes
+
+**Before:**
+```yaml
+- name: Execute Lifecycle Task
+  run: |
+    cd infra/envs/dev
+    terraform init
+    
+    if [ "${{ github.event.schedule }}" == "0 13 * * *" ]; then
+      echo "Bedtime! Destroying infrastructure..."
+      terraform destroy -auto-approve -var-file="dev.secrets.tfvars"
+    else
+      echo "Wake up! Provisioning infrastructure..."
+      terraform apply -auto-approve -var-file="dev.secrets.tfvars"
+    fi
+```
+
+**After:**
+```yaml
+- name: Execute Lifecycle Task
+  env:
+    TF_VAR_api_mongo_uri_secret_arn: ${{ secrets.API_MONGO_URI_SECRET_ARN }}
+    TF_VAR_api_jwt_secret_arn: ${{ secrets.API_JWT_SECRET_ARN }}
+    TF_VAR_api_openweather_api_key_arn: ${{ secrets.API_OPENWEATHER_API_KEY_ARN }}
+  run: |
+    cd infra/envs/dev
+    terraform init
+    
+    if [ "${{ github.event.schedule }}" == "0 13 * * *" ]; then
+      echo "Bedtime! Destroying infrastructure..."
+      terraform destroy -auto-approve
+    else
+      echo "Wake up! Provisioning infrastructure..."
+      terraform apply -auto-approve
+    fi
+```
+
+### Technical Details
+- **Environment Variables**: Terraform automatically reads environment variables prefixed with `TF_VAR_`
+- **Variable Mapping**: GitHub secrets are mapped to `TF_VAR_` variables:
+  - `TF_VAR_api_mongo_uri_secret_arn` from `secrets.API_MONGO_URI_SECRET_ARN`
+  - `TF_VAR_api_jwt_secret_arn` from `secrets.API_JWT_SECRET_ARN`
+  - `TF_VAR_api_openweather_api_key_arn` from `secrets.API_OPENWEATHER_API_KEY_ARN`
+- **No File Dependency**: Removed dependency on `dev.secrets.tfvars` file in CI/CD
+- **Terraform Behavior**: Terraform automatically converts `TF_VAR_` environment variables to Terraform variables (e.g., `TF_VAR_api_mongo_uri_secret_arn` becomes `api_mongo_uri_secret_arn`)
+
+### Benefits
+- **Security**: Secrets are now stored in GitHub Secrets instead of committed tfvars files
+- **CI/CD Friendly**: No need to manage tfvars files in the repository
+- **Standard Practice**: Using environment variables is the recommended approach for CI/CD pipelines
+- **Flexibility**: Secrets can be updated in GitHub without modifying code
+- **Audit Trail**: GitHub Secrets provide better audit logging than file-based secrets
+
+### Required GitHub Secrets
+The following secrets must be configured in GitHub repository settings (Settings → Secrets and variables → Actions):
+- `API_MONGO_URI_SECRET_ARN` - ARN of Secrets Manager secret for MONGO_URI
+- `API_JWT_SECRET_ARN` - ARN of Secrets Manager secret for JWT_SECRET
+- `API_OPENWEATHER_API_KEY_ARN` - ARN of Secrets Manager secret for OPENWEATHER_API_KEY
+
+### Secret Format
+Secrets should contain full ARNs, for example:
+```
+arn:aws:secretsmanager:ap-southeast-2:149536499524:secret:campmate/dev/api/MONGO_URI-CXSPFf
+```
+
+### Verification
+After this change:
+- GitHub Actions workflow will use environment variables instead of tfvars file
+- `terraform apply` and `terraform destroy` will read secrets from environment variables
+- Check GitHub Actions logs to verify secrets are being used (values will be masked)
+- Local development can still use `dev.secrets.tfvars` file
+
+### Notes
+- **Local Development**: `dev.secrets.tfvars` can still be used for local development
+- **CI/CD Only**: This change only affects the GitHub Actions workflow, not local Terraform usage
+- **Secret Rotation**: Secrets can be rotated in GitHub Secrets without code changes
+- **Backward Compatibility**: Local `terraform` commands can still use `-var-file="dev.secrets.tfvars"` if needed
+
 ## Stage 2A: AWS Networking Infrastructure (Terraform)
 
 ### Goal
