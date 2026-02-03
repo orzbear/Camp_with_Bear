@@ -1,0 +1,40 @@
+name: Cloud Lifecycle (Cost Optimization)
+
+on:
+  schedule:
+    # 1:00 PM UTC is Midnight in Sydney (AEDT)
+    - cron: '0 13 * * *'
+    # 9:00 PM UTC is 8:00 AM in Sydney (AEDT)
+    - cron: '0 21 * * *'
+  workflow_dispatch: # Allows you to manually trigger "Wake Up" or "Sleep" buttons
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      # LOGIC: If it is Midnight (13:00 UTC), Destroy. If it is Morning (21:00 UTC), Apply.
+      - name: Execute Lifecycle Task
+        run: |
+          cd infra/envs/dev
+          terraform init
+          
+          if [ "${{ github.event.schedule }}" == "0 13 * * *" ]; then
+            echo "Bedtime! Destroying infrastructure..."
+            terraform destroy -auto-approve -var-file="dev.secrets.tfvars"
+          else
+            echo "Wake up! Provisioning infrastructure..."
+            terraform apply -auto-approve -var-file="dev.secrets.tfvars"
+          fi

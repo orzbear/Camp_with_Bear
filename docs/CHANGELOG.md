@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - CI/CD: Dual Tagging for ECS Image Discovery
+
+### Changed
+- **GitHub Actions Workflow** (`.github/workflows/deploy.yml`):
+  - Updated frontend and API build commands to tag images with both `github.sha` and `latest`
+  - Each image now has two tags: immutable version (`${{ github.sha }}`) and `latest` for ECS service discovery
+  - Both tags are pushed to ECR in a single build operation
+
+### Files Modified
+- `.github/workflows/deploy.yml` - Added `latest` tag alongside `github.sha` tag for both frontend and API images
+
+### Benefits
+- **ECS Service Discovery**: ECS services can always find the most recent image using the `latest` tag
+- **Immutable Versioning**: Still maintains `github.sha` tag for precise version tracking and rollback
+- **Dual Tagging**: Single build operation creates both tags, no additional build time
+- **Flexibility**: Can reference images by commit SHA for deployments or `latest` for convenience
+
+### Technical Details
+- **Multiple Tags**: Using multiple `-t` flags in `docker buildx build` to tag the same image with different tags
+- **Single Push**: The `--push` flag pushes all tags to ECR in one operation
+- **Tag Format**: 
+  - Immutable: `$ECR_REGISTRY/$REPO:${{ github.sha }}`
+  - Latest: `$ECR_REGISTRY/$REPO:latest`
+
 ## [0.2.5] - CI/CD: Build ARM64 Docker Images in GitHub Actions
 
 ### Changed
