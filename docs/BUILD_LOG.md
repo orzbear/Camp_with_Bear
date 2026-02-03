@@ -1081,6 +1081,78 @@ After this change:
 - **Native Dependencies**: Some native Node.js modules may need ARM64-compatible builds
 - **Testing**: Test the workflow on a branch before merging to main
 
+## Fix: CI/CD - Dual Tagging for ECS Image Discovery
+
+### Goal
+Update GitHub Actions workflow to tag and push images with both `github.sha` (immutable versioning) and `latest` (for ECS service discovery), ensuring ECS services can always find the most recent image.
+
+### Changes Made
+Updated both frontend and API build commands to tag images with two tags: the commit SHA and `latest`, then push both tags to ECR.
+
+### Files Modified
+- **`.github/workflows/deploy.yml`**:
+  - Updated frontend build to tag with both `$IMAGE_TAG` (github.sha) and `latest`
+  - Updated API build to tag with both `$IMAGE_TAG` (github.sha) and `latest`
+
+### Code Changes
+
+**Before:**
+```yaml
+- name: Build and Push Frontend
+  env:
+    ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    IMAGE_TAG: ${{ github.sha }}
+  run: |
+    docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG -f docker/frontend/Dockerfile --push .
+```
+
+**After:**
+```yaml
+- name: Build and Push Frontend
+  env:
+    ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    IMAGE_TAG: ${{ github.sha }}
+  run: |
+    docker buildx build --platform linux/arm64 \
+      -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG \
+      -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:latest \
+      -f docker/frontend/Dockerfile --push .
+```
+
+### Technical Details
+- **Multiple Tags**: Using multiple `-t` flags in `docker buildx build` to tag the same image with different tags
+- **Single Build**: The same image is built once and tagged with both `github.sha` and `latest`
+- **Single Push**: The `--push` flag pushes all tags to ECR in one operation
+- **Tag Format**:
+  - Immutable: `$ECR_REGISTRY/$REPO:${{ github.sha }}` (e.g., `149536499524.dkr.ecr.ap-southeast-2.amazonaws.com/campmate-frontend:abc123def456`)
+  - Latest: `$ECR_REGISTRY/$REPO:latest` (e.g., `149536499524.dkr.ecr.ap-southeast-2.amazonaws.com/campmate-frontend:latest`)
+
+### Benefits
+- **ECS Service Discovery**: ECS services can always find the most recent image using the `latest` tag
+- **Immutable Versioning**: Still maintains `github.sha` tag for precise version tracking and rollback
+- **Dual Tagging**: Single build operation creates both tags, no additional build time
+- **Flexibility**: Can reference images by commit SHA for deployments or `latest` for convenience
+- **Rollback Support**: Can easily rollback to a specific commit SHA if needed
+
+### Use Cases
+- **ECS Task Definitions**: Can use `latest` tag for automatic updates or specific SHA for pinned versions
+- **Manual Deployments**: Can reference `latest` for quick deployments or SHA for reproducible deployments
+- **Rollback**: Can rollback to a specific commit SHA by updating the task definition image tag
+- **Debugging**: Can identify which commit SHA an image was built from
+
+### Verification
+After this change:
+- GitHub Actions workflow will build and tag images with both `github.sha` and `latest`
+- Both tags will be pushed to ECR
+- Check ECR console → Images → Tags to verify both tags exist
+- ECS services can reference either tag in task definitions
+
+### Notes
+- **Tag Overwrite**: The `latest` tag will be overwritten on each deployment (this is expected behavior)
+- **Immutable SHA Tags**: The `github.sha` tags are immutable and will accumulate in ECR (ECR lifecycle policy will clean up old images)
+- **ECS Task Definitions**: Can be configured to use either `latest` or a specific SHA tag
+- **Best Practice**: For production, consider using SHA tags for reproducibility, but `latest` is useful for dev environments
+
 ## Stage 2A: AWS Networking Infrastructure (Terraform)
 
 ### Goal

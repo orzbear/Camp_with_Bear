@@ -50,7 +50,10 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG -f docker/frontend/Dockerfile --push .
+          docker buildx build --platform linux/arm64 \
+            -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:latest \
+            -f docker/frontend/Dockerfile --push .
           echo "frontend_image=$ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Update ECS Frontend Service
@@ -63,7 +66,10 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/${{ env.ECR_API_REPO }}:$IMAGE_TAG -f docker/api/Dockerfile --push .
+          docker buildx build --platform linux/arm64 \
+            -t $ECR_REGISTRY/${{ env.ECR_API_REPO }}:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ env.ECR_API_REPO }}:latest \
+            -f docker/api/Dockerfile --push .
 
       - name: Update ECS API Service
         run: |
