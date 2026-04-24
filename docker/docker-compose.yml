@@ -6,7 +6,7 @@ services:
       context: ..
       dockerfile: docker/frontend/Dockerfile
       args:
-        VITE_API_BASE: http://localhost:8080
+        VITE_API_BASE: /api
     image: campmate-frontend
     ports:
       - "3000:3000"
@@ -25,6 +25,7 @@ services:
       - MONGO_URI=mongodb://mongo:27017/campmate
       - JWT_SECRET=${JWT_SECRET:-dev_change_me}
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-c5df017a7961da45a250532bba658b24}
+      - ALLOWED_ORIGINS=http://localhost:3000
     depends_on:
       - mongo
 

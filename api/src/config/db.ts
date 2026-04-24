@@ -13,7 +13,11 @@ export async function connectDB() {
 
   while (retries < maxRetries) {
     try {
-      await mongoose.connect(MONGO_URI);
+      await mongoose.connect(MONGO_URI, {
+        serverSelectionTimeoutMS: 10000, // fail fast if Atlas is unreachable
+        socketTimeoutMS: 45000,          // drop idle sockets before Render's 60s timeout
+        maxPoolSize: 10,
+      });
       isConnected = true;
       console.log('✅ MongoDB connected successfully');
       return;
