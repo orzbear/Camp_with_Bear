@@ -1,14 +1,9 @@
 import type { paths as ApiPaths } from '../types/api';
 
-// Use VITE_API_BASE if set, otherwise use relative path /api (for ALB routing)
-// In production behind ALB, /api/* routes to the API service
-// For local development, set VITE_API_BASE=http://localhost:8080 in .env.local
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
-
-// Debug: Log API base URL to verify build-time configuration
-console.log('🔗 [API Client] API_BASE:', API_BASE);
-console.log('🔗 [API Client] VITE_API_BASE env:', import.meta.env.VITE_API_BASE);
-console.log('🔗 [API Client] Using relative path /api for ALB routing:', API_BASE === '/api');
+// Set VITE_API_BASE in your .env / Vercel environment variables to your Render backend URL,
+// e.g. VITE_API_BASE=https://campmate-api.onrender.com/api
+// Falls back to localhost:8080 for local development without an .env file.
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api';
 
 type LoginRequest = ApiPaths['/auth/login']['post']['requestBody']['content']['application/json'];
 type LoginResponse = ApiPaths['/auth/login']['post']['responses']['200']['content']['application/json'];

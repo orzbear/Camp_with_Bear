@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import { connectDB } from './config/db.js';
-import { PORT, NODE_ENV } from './config/env.js';
+import { PORT, NODE_ENV, ALLOWED_ORIGINS } from './config/env.js';
 import { seedCampsites } from './scripts/seedCampsites.js';
 import { authMiddleware } from './middleware/auth.js';
 import healthRouter from './routes/health.js';
@@ -33,9 +33,9 @@ function getAllowedOrigins(): string[] {
     );
   }
 
-  // Support multiple origins via ALLOWED_ORIGINS (comma-separated)
-  if (process.env.ALLOWED_ORIGINS) {
-    const allowedOriginsList = process.env.ALLOWED_ORIGINS
+  // Support multiple origins via ALLOWED_ORIGINS (comma-separated, e.g. your Vercel URL)
+  if (ALLOWED_ORIGINS) {
+    const allowedOriginsList = ALLOWED_ORIGINS
       .split(',')
       .map(origin => origin.trim())
       .filter(Boolean);
@@ -77,8 +77,7 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Routes - Mount all routes under /api prefix for ALB routing
-// ALB routes /api/* to this service, so we need to handle the /api prefix
+// Routes - all mounted under /api prefix
 app.use('/api/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/me', meRouter);
@@ -106,10 +105,9 @@ async function start() {
       console.log(`CampMate API server running on port ${PORT}`);
     });
 
-    // Set keepAliveTimeout to 65000ms (slightly higher than ALB's 60s default)
-    // This prevents the target from closing connections prematurely
+    // Render's load balancer has a 75s idle timeout; keep connections alive slightly longer
     server.keepAliveTimeout = 65000;
-    server.headersTimeout = 66000; // Should be slightly higher than keepAliveTimeout
+    server.headersTimeout = 66000;
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
