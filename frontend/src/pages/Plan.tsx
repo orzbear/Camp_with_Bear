@@ -129,14 +129,14 @@ export function Plan() {
     return (
       <Layout>
         <div className="max-w-4xl mx-auto py-16 px-4 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Plan Your Trip</h1>
+          <h1 className="font-display font-bold text-3xl text-gray-900 mb-4">Plan Your Trip</h1>
           <p className="text-lg text-gray-600 mb-8">
             Log in to plan your trip and generate personalised checklists.
           </p>
           <div className="space-x-4">
             <Link
               to="/login"
-              className="inline-block bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="inline-block bg-brand-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-brand-700 transition-colors"
             >
               Login
             </Link>
@@ -155,7 +155,7 @@ export function Plan() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Plan Your Trip</h1>
+        <h1 className="font-display font-bold text-3xl text-gray-900 mb-6">Plan Your Trip</h1>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -167,15 +167,15 @@ export function Plan() {
           {/* Left: Campsite Picker and Trip Form */}
           <div className="space-y-6">
             {/* Campsite Picker */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Select Campsite</h2>
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <h2 className="font-display font-semibold text-lg text-gray-900 mb-4">Select Campsite</h2>
               <select
                 value={selectedCampsite?._id || ''}
                 onChange={(e) => {
                   const campsite = campsites.find(c => c._id === e.target.value);
                   setSelectedCampsite(campsite || null);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
               >
                 <option value="">Choose a campsite...</option>
                 {campsites.map((campsite) => (
@@ -187,8 +187,8 @@ export function Plan() {
             </div>
 
             {/* Trip Form */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Trip Details</h2>
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <h2 className="font-display font-semibold text-lg text-gray-900 mb-4">Trip Details</h2>
               <form onSubmit={handleCreateTrip} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
@@ -197,7 +197,7 @@ export function Plan() {
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                   />
                 </div>
                 <div>
@@ -207,7 +207,7 @@ export function Plan() {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                   />
                 </div>
                 <div>
@@ -218,7 +218,7 @@ export function Plan() {
                     value={groupSize}
                     onChange={(e) => setGroupSize(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                   />
                 </div>
                 <div>
@@ -227,7 +227,7 @@ export function Plan() {
                     value={experience}
                     onChange={(e) => setExperience(e.target.value as any)}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                   >
                     <option value="beginner">Beginner</option>
                     <option value="intermediate">Intermediate</option>
@@ -242,13 +242,13 @@ export function Plan() {
                     value={activities}
                     onChange={(e) => setActivities(e.target.value)}
                     placeholder="hiking, camping, fishing"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={!selectedCampsite}
-                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+                  className="w-full bg-brand-600 text-white py-2.5 px-4 rounded-xl text-sm font-semibold hover:bg-brand-700 transition-colors disabled:opacity-50"
                 >
                   Create Trip
                 </button>
@@ -260,8 +260,8 @@ export function Plan() {
           <div className="space-y-6">
             {/* Trip Selector */}
             {trips.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Your Trips</h2>
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <h2 className="font-display font-semibold text-lg text-gray-900 mb-4">Your Trips</h2>
                 <select
                   value={selectedTrip?._id || ''}
                   onChange={async (e) => {
@@ -271,7 +271,7 @@ export function Plan() {
                       await loadTripData(trip._id);
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                 >
                   <option value="">Select a trip...</option>
                   {trips.map((trip) => (
@@ -286,8 +286,8 @@ export function Plan() {
             {selectedTrip && (
               <>
                 {/* Trip Summary */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">Trip Summary</h2>
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                  <h2 className="font-display font-semibold text-lg text-gray-900 mb-4">Trip Summary</h2>
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Location:</span> {selectedTrip.location.name}</p>
                     <p><span className="font-medium">Dates:</span> {new Date(selectedTrip.startDate).toLocaleDateString()} - {new Date(selectedTrip.endDate).toLocaleDateString()}</p>
@@ -299,8 +299,8 @@ export function Plan() {
 
                 {/* Weather */}
                 {weatherData && (
-                  <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Weather Forecast</h2>
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                    <h2 className="font-display font-semibold text-lg text-gray-900 mb-4">Weather Forecast</h2>
                     <pre className="bg-gray-50 p-4 rounded overflow-auto text-sm max-h-64">
                       {JSON.stringify(weatherData, null, 2)}
                     </pre>
@@ -309,8 +309,8 @@ export function Plan() {
 
                 {/* Checklist */}
                 {checklistData && (
-                  <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Packing Checklist</h2>
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                    <h2 className="font-display font-semibold text-lg text-gray-900 mb-4">Packing Checklist</h2>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {checklistData.items?.map((item: any, index: number) => (
                         <div
@@ -322,7 +322,7 @@ export function Plan() {
                               <span className="font-medium text-gray-900">{item.name}</span>
                               <span className="text-sm text-gray-600">x{item.qty}</span>
                               {item.recommended && (
-                                <span className="text-green-600 text-sm font-medium">✅ Recommended</span>
+                                <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">Recommended</span>
                               )}
                             </div>
                             <p className="text-sm text-gray-600 mt-1">{item.reason}</p>
@@ -336,7 +336,7 @@ export function Plan() {
             )}
 
             {!selectedTrip && trips.length === 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6 text-center text-gray-600">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-center text-gray-600">
                 <p>Create a trip to see weather forecast and packing checklist</p>
               </div>
             )}

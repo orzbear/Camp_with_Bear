@@ -1,276 +1,496 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon, LatLngExpression } from 'leaflet';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { getCampsites, type Campsite } from '../api/client';
 import { Layout } from '../components/Layout';
-import { MapPin } from 'lucide-react';
-import { demoFootprints } from '../data/demoFootprints';
-import type { Footprint } from '../api/client';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Search, X, ArrowLeft, ExternalLink, Map } from 'lucide-react';
 
-// Map controller component that flies to selected footprint
-function MapController({ selectedFootprint }: { selectedFootprint: Footprint | null }) {
-  const map = useMap();
+// ─── Animation tokens ─────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (selectedFootprint) {
-      map.flyTo([selectedFootprint.location.lat, selectedFootprint.location.lon], 13, {
-        duration: 1.5,
-      });
-    }
-  }, [selectedFootprint, map]);
+const CARD_CONTAINER: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+};
+const CARD_ITEM: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show:   { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
+};
 
-  return null;
-}
+// ─── Map helpers ─────────────────────────────────────────────────────────────
 
-// Custom marker icon using SVG
-function createCustomIcon(color: string) {
+function createPin(hex: string) {
   return new Icon({
-    iconUrl: `data:image/svg+xml;base64,${btoa(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-        <circle cx="12" cy="10" r="3"></circle>
-      </svg>
-    `)}`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
+    iconUrl: `data:image/svg+xml;base64,${btoa(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
+        <path d="M16 0C9 0 3 6 3 13c0 10 13 27 13 27s13-17 13-27C29 6 23 0 16 0z" fill="${hex}" stroke="white" stroke-width="2"/>
+        <circle cx="16" cy="13" r="5" fill="white" fill-opacity="0.9"/>
+      </svg>`
+    )}`,
+    iconSize: [32, 40], iconAnchor: [16, 40], popupAnchor: [0, -40],
   });
 }
 
-const footprintIcon = createCustomIcon('#10b981'); // Green for footprints
+const pins = {
+  tent:    createPin('#15803D'),
+  caravan: createPin('#B45309'),
+  both:    createPin('#0F766E'),
+};
 
-export function Explore() {
-  const { token } = useAuth();
-  const [footprints] = useState<Footprint[]>(demoFootprints);
-  const [selectedFootprint, setSelectedFootprint] = useState<Footprint | null>(null);
-  const [hoveredFootprint, setHoveredFootprint] = useState<string | null>(null);
-  const [showMap, setShowMap] = useState(false); // For mobile toggle
+function MapFlyTo({ campsite }: { campsite: Campsite | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (campsite) map.flyTo([campsite.location.lat, campsite.location.lon], 13, { duration: 1.2 });
+  }, [campsite, map]);
+  return null;
+}
 
-  // Calculate center of all footprints for map
-  const mapCenter: LatLngExpression = footprints.length > 0
-    ? [
-        footprints.reduce((sum, f) => sum + f.location.lat, 0) / footprints.length,
-        footprints.reduce((sum, f) => sum + f.location.lon, 0) / footprints.length,
-      ]
-    : [-33.8688, 151.2093]; // Sydney center
+// ─── Skeleton card ────────────────────────────────────────────────────────────
 
-  const handleFootprintClick = (footprint: Footprint) => {
-    setSelectedFootprint(footprint);
-  };
-
-  const handleFootprintMarkerClick = (footprint: Footprint) => {
-    setSelectedFootprint(footprint);
-  };
-
-  // If user is logged in, suggest they go to Footprints page
-  if (token) {
-    return (
-      <Layout>
-        <div className="max-w-4xl mx-auto py-16 px-4 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Explore Demo Footprints</h1>
-          <p className="text-lg text-gray-600 mb-8">
-            You're logged in! Visit the <Link to="/footprints" className="text-green-600 hover:text-green-700 font-medium">Footprints</Link> page to view and manage your own camping footprints.
-          </p>
-          <Link
-            to="/footprints"
-            className="inline-block bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-          >
-            Go to My Footprints
-          </Link>
+function SkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-gray-200 overflow-hidden animate-pulse bg-white">
+      <div className="h-28 bg-gray-200" />
+      <div className="p-4 space-y-2.5">
+        <div className="h-4 bg-gray-200 rounded-lg w-3/4" />
+        <div className="h-3 bg-gray-200 rounded-lg w-1/2" />
+        <div className="flex gap-2 mt-3">
+          <div className="h-5 bg-gray-200 rounded-full w-16" />
+          <div className="h-5 bg-gray-200 rounded-full w-20" />
         </div>
-      </Layout>
-    );
-  }
+      </div>
+    </div>
+  );
+}
+
+// ─── Facilities ───────────────────────────────────────────────────────────────
+
+const FACILITIES: { key: keyof Campsite['facilities']; label: string; emoji: string }[] = [
+  { key: 'hasPower',       label: 'Power',     emoji: '⚡' },
+  { key: 'hasHotWater',    label: 'Hot Water', emoji: '💧' },
+  { key: 'hasShowers',     label: 'Showers',   emoji: '🚿' },
+  { key: 'hasToilets',     label: 'Toilets',   emoji: '🚽' },
+  { key: 'allowsCampfire', label: 'Campfire',  emoji: '🔥' },
+  { key: 'allowsFishing',  label: 'Fishing',   emoji: '🎣' },
+];
+
+// ─── Card gradient + badge by site type ──────────────────────────────────────
+
+const CARD_STYLE = {
+  tent:    { gradient: 'from-brand-700 to-brand-500', icon: '⛺',   badgeVariant: 'brand'  as const },
+  caravan: { gradient: 'from-amber-700 to-amber-500', icon: '🚐',   badgeVariant: 'amber'  as const },
+  both:    { gradient: 'from-teal-700  to-teal-500',  icon: '⛺🚐', badgeVariant: 'teal'   as const },
+};
+
+function SiteTypeBadge({ type }: { type: Campsite['siteType'] }) {
+  const { icon, badgeVariant } = CARD_STYLE[type];
+  const label = type === 'tent' ? 'Tent' : type === 'caravan' ? 'Caravan' : 'Tent & Caravan';
+  return <Badge variant={badgeVariant}>{icon} {label}</Badge>;
+}
+
+// ─── Campsite card ────────────────────────────────────────────────────────────
+
+function CampsiteCard({ campsite, selected, onClick }: {
+  campsite: Campsite; selected: boolean; onClick: () => void;
+}) {
+  const { gradient, icon } = CARD_STYLE[campsite.siteType];
+  const active = FACILITIES.filter(f => campsite.facilities[f.key]);
 
   return (
-    <Layout>
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
-        {/* Guest Mode Banner */}
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 flex items-center justify-between">
-          <p className="text-sm text-blue-800">
-            <span className="font-medium">Demo mode</span> — sign in to save your own camping footprints.
-          </p>
-          <Link
-            to="/login"
-            className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Sign in
-          </Link>
+    <motion.div
+      variants={CARD_ITEM}
+      whileHover={{ y: -4, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={`rounded-2xl border overflow-hidden cursor-pointer bg-white
+        ${selected
+          ? 'border-gray-900 ring-2 ring-gray-900 shadow-lg'
+          : 'border-gray-200 shadow-sm'
+        }`}
+    >
+      <div className={`h-28 bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+        <span className="text-5xl drop-shadow-sm">{icon}</span>
+      </div>
+      <div className="p-4">
+        <h3 className="font-display font-semibold text-gray-900 leading-snug text-base line-clamp-2">
+          {campsite.name}
+        </h3>
+        <p className="text-sm text-gray-500 mt-0.5 truncate">{campsite.parkName}</p>
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          <Badge variant="default">{campsite.region}</Badge>
+          <SiteTypeBadge type={campsite.siteType} />
         </div>
+        {active.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {active.map(f => (
+              <span key={f.key} title={f.label} className="text-base">{f.emoji}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
-        {/* Split Layout: List + Map */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left: List Panel (40% on desktop) */}
-          <div className={`${showMap ? 'hidden' : 'flex'} lg:flex flex-col w-full lg:w-2/5 border-r border-gray-200 bg-white`}>
-            {/* Header */}
-            <div className="p-4 border-b bg-green-50">
-              <h2 className="text-lg font-bold text-gray-800">Camping Footprints (Demo)</h2>
-              <p className="text-xs text-gray-600 mt-1">Explore sample camping experiences</p>
+// ─── Detail content ───────────────────────────────────────────────────────────
+
+function CampsiteDetail({ campsite, onClose, onPlan }: {
+  campsite: Campsite; onClose: () => void; onPlan: () => void;
+}) {
+  const { gradient, icon } = CARD_STYLE[campsite.siteType];
+  const active = FACILITIES.filter(f => campsite.facilities[f.key]);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className={`flex-shrink-0 h-36 bg-gradient-to-br ${gradient} flex items-center justify-center relative`}>
+        <span className="text-6xl drop-shadow">{icon}</span>
+        <button
+          onClick={onClose}
+          className="absolute top-3 left-3 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm
+                     flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-5 space-y-5">
+          <div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              <Badge variant="default">{campsite.region}</Badge>
+              <SiteTypeBadge type={campsite.siteType} />
             </div>
-
-            {/* Scrollable List */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="divide-y divide-gray-200">
-                {footprints.map((footprint) => (
-                  <div
-                    key={footprint._id}
-                    onClick={() => handleFootprintClick(footprint)}
-                    onMouseEnter={() => setHoveredFootprint(footprint._id)}
-                    onMouseLeave={() => setHoveredFootprint(null)}
-                    className={`p-3 cursor-pointer transition-colors ${
-                      selectedFootprint?._id === footprint._id
-                        ? 'bg-green-100 border-l-4 border-l-green-500'
-                        : hoveredFootprint === footprint._id
-                        ? 'bg-green-50'
-                        : 'hover:bg-green-50'
-                    }`}
-                  >
-                    <h3 className="font-semibold text-gray-900 mb-1 text-sm">{footprint.title}</h3>
-                    <p className="text-xs text-gray-600 mb-1">
-                      {new Date(footprint.startDate).toLocaleDateString()} - {new Date(footprint.endDate).toLocaleDateString()}
-                    </p>
-                    {footprint.rating && (
-                      <div className="text-xs text-gray-600 mb-1">
-                        {'⭐'.repeat(footprint.rating)}
-                      </div>
-                    )}
-                    {footprint.tags && footprint.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {footprint.tags.slice(0, 3).map((tag: string) => (
-                          <span
-                            key={tag}
-                            className="px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+            <h2 className="font-display font-bold text-xl text-gray-900 leading-snug">{campsite.name}</h2>
+            <p className="text-sm text-gray-500 mt-1">{campsite.parkName}</p>
+            <p className="font-mono text-xs text-gray-400 mt-1">
+              {campsite.location.lat.toFixed(4)}, {campsite.location.lon.toFixed(4)}
+            </p>
+          </div>
+          {active.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Facilities</h3>
+              <div className="flex flex-wrap gap-2">
+                {active.map(f => (
+                  <span key={f.key} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-full text-gray-700">
+                    {f.emoji} {f.label}
+                  </span>
                 ))}
               </div>
             </div>
+          )}
+          {campsite.description && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">About</h3>
+              <p className="text-sm text-gray-700 leading-relaxed">{campsite.description}</p>
+            </div>
+          )}
+          {campsite.tags && campsite.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {campsite.tags.map(tag => <Badge key={tag} variant="outline">{tag}</Badge>)}
+            </div>
+          )}
+          <div className="flex flex-col gap-2 pb-4">
+            <Button size="lg" onClick={onPlan} className="w-full">Plan a Trip Here →</Button>
+            {campsite.bookingUrl && (
+              <a href={campsite.bookingUrl} target="_blank" rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm
+                           font-medium text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                <ExternalLink className="w-4 h-4" />
+                View Booking Info
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+type View = 'list' | 'detail';
+type TypeFilter = 'all' | 'tent' | 'caravan' | 'both';
+const SYDNEY: LatLngExpression = [-33.8688, 151.2093];
+const NAV_H = 64;
+
+export function Explore() {
+  const navigate = useNavigate();
+  const [campsites, setCampsites]           = useState<Campsite[]>([]);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
+  const [search, setSearch]                 = useState('');
+  const [typeFilter, setTypeFilter]         = useState<TypeFilter>('all');
+  const [selected, setSelected]             = useState<Campsite | null>(null);
+  const [view, setView]                     = useState<View>('list');
+  const [showMapOverlay, setShowMapOverlay] = useState(false);
+
+  useEffect(() => {
+    getCampsites()
+      .then(setCampsites)
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load campsites'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = campsites.filter(c => {
+    const matchesType   = typeFilter === 'all' || c.siteType === typeFilter;
+    const q             = search.trim().toLowerCase();
+    const matchesSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.parkName.toLowerCase().includes(q) ||
+      c.region.toLowerCase().includes(q);
+    return matchesType && matchesSearch;
+  });
+
+  const selectCampsite = useCallback((c: Campsite) => {
+    setSelected(c);
+    setView('detail');
+  }, []);
+
+  const clearSelection = () => {
+    setSelected(null);
+    setView('list');
+  };
+
+  const handlePlan = (c: Campsite) =>
+    navigate(`/plan?campsiteId=${c._id}&campsite=${encodeURIComponent(c.name)}`);
+
+  const mapCenter: LatLngExpression = selected
+    ? [selected.location.lat, selected.location.lon]
+    : filtered.length > 0
+      ? [filtered.reduce((s,c)=>s+c.location.lat,0)/filtered.length,
+         filtered.reduce((s,c)=>s+c.location.lon,0)/filtered.length]
+      : SYDNEY;
+
+  return (
+    <Layout>
+      <div className="flex flex-col" style={{ height: `calc(100vh - ${NAV_H}px)` }}>
+
+        {/* Filter bar */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 py-3 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search campsites, parks or regions…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl
+                         focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900
+                         focus:bg-white transition-all"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
+              {(['all', 'tent', 'caravan', 'both'] as TypeFilter[]).map(t => (
+                <motion.button
+                  key={t}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setTypeFilter(t)}
+                  className={`flex-shrink-0 px-3.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    typeFilter === t ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {t === 'all' ? 'All' : t === 'tent' ? '⛺ Tent' : t === 'caravan' ? '🚐 Caravan' : '⛺🚐 Both'}
+                </motion.button>
+              ))}
+            </div>
+            <span className="flex-shrink-0 text-xs text-gray-400">
+              {loading ? '…' : `${filtered.length} sites`}
+            </span>
+          </div>
+        </div>
+
+        {/* Split panel */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+
+          {/* LEFT: card grid or detail */}
+          <div className="w-full md:w-[55%] overflow-y-auto pb-20 md:pb-4">
+
+            {/* LIST VIEW */}
+            {view === 'list' && (
+              <>
+                {error && (
+                  <div className="m-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>
+                )}
+                {!error && filtered.length === 0 && !loading && (
+                  <div className="py-20 text-center">
+                    <p className="text-gray-400 text-sm">No campsites match your search.</p>
+                  </div>
+                )}
+
+                {/* Skeleton cards while loading */}
+                {loading && (
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+                  </div>
+                )}
+
+                {/* Staggered card grid */}
+                {!loading && !error && filtered.length > 0 && (
+                  <motion.div
+                    variants={CARD_CONTAINER}
+                    initial="hidden"
+                    animate="show"
+                    className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4"
+                  >
+                    {filtered.map(c => (
+                      <CampsiteCard
+                        key={c._id}
+                        campsite={c}
+                        selected={selected?._id === c._id}
+                        onClick={() => selectCampsite(c)}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </>
+            )}
+
+            {/* DETAIL VIEW (desktop) */}
+            <AnimatePresence mode="wait">
+              {view === 'detail' && selected && (
+                <motion.div
+                  key={selected._id}
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                  className="h-full"
+                >
+                  <CampsiteDetail
+                    campsite={selected}
+                    onClose={clearSelection}
+                    onPlan={() => handlePlan(selected)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Right: Map Panel (60% on desktop) */}
-          <div className={`${showMap ? 'flex' : 'hidden'} lg:flex flex-col w-full lg:w-3/5 relative`}>
-            {/* Mobile Map Toggle Button */}
-            <button
-              onClick={() => setShowMap(!showMap)}
-              className="lg:hidden absolute top-4 right-4 z-[1000] bg-white px-4 py-2 rounded-md shadow-lg border border-gray-300 flex items-center gap-2 text-sm font-medium hover:bg-gray-50"
-            >
-              <MapPin className="w-4 h-4" />
-              {showMap ? 'Show List' : 'Show Map'}
-            </button>
-
-            <MapContainer
-              center={mapCenter}
-              zoom={11}
-              style={{ height: '100%', width: '100%' }}
-              className="z-0"
-            >
+          {/* RIGHT: map (desktop) */}
+          <div className="hidden md:block md:w-[45%] border-l border-gray-100">
+            <MapContainer center={mapCenter} zoom={10} style={{ height: '100%', width: '100%' }} className="z-0">
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
               />
-              <MapController selectedFootprint={selectedFootprint} />
-              
-              {/* Footprint Markers */}
-              {footprints.map((footprint) => (
-                <Marker
-                  key={`footprint-${footprint._id}`}
-                  position={[footprint.location.lat, footprint.location.lon]}
-                  icon={footprintIcon}
-                  eventHandlers={{
-                    click: () => handleFootprintMarkerClick(footprint),
-                  }}
-                >
+              <MapFlyTo campsite={selected} />
+              {filtered.map(c => (
+                <Marker key={c._id} position={[c.location.lat, c.location.lon]} icon={pins[c.siteType]}
+                  eventHandlers={{ click: () => selectCampsite(c) }}>
                   <Popup>
-                    <div className="text-sm">
-                      <h3 className="font-semibold mb-1">{footprint.title}</h3>
-                      <p className="text-gray-600 text-xs">
-                        {new Date(footprint.startDate).toLocaleDateString()} - {new Date(footprint.endDate).toLocaleDateString()}
-                      </p>
-                      {footprint.rating && (
-                        <p className="text-xs text-gray-600 mt-1">
-                          {'⭐'.repeat(footprint.rating)}
-                        </p>
-                      )}
-                    </div>
+                    <p className="font-semibold text-sm">{c.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{c.parkName}</p>
                   </Popup>
                 </Marker>
               ))}
             </MapContainer>
           </div>
         </div>
-
-        {/* Footprint Detail Drawer/Modal */}
-        {selectedFootprint && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedFootprint(null)}>
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedFootprint.title}</h2>
-                    <p className="text-sm text-gray-600">
-                      {new Date(selectedFootprint.startDate).toLocaleDateString()} - {new Date(selectedFootprint.endDate).toLocaleDateString()}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {selectedFootprint.location.lat.toFixed(4)}, {selectedFootprint.location.lon.toFixed(4)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedFootprint(null)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {selectedFootprint.rating && (
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">Rating</h3>
-                    <p className="text-lg">{'⭐'.repeat(selectedFootprint.rating)}</p>
-                  </div>
-                )}
-
-                {selectedFootprint.notes && (
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">Notes</h3>
-                    <p className="text-gray-700">{selectedFootprint.notes}</p>
-                  </div>
-                )}
-
-                {selectedFootprint.tags && selectedFootprint.tags.length > 0 && (
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedFootprint.tags.map((tag: string) => (
-                        <span
-                          key={tag}
-                          className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <Link
-                    to="/login"
-                    className="inline-block bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                  >
-                    Sign in to create your own footprints
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* FAB — animated entrance */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 22, delay: 0.4 }}
+        whileHover={{ scale: 1.07 }}
+        whileTap={{ scale: 0.93 }}
+        onClick={() => setShowMapOverlay(true)}
+        className="md:hidden fixed bottom-20 right-4 z-[1000]
+                   flex items-center gap-2 px-4 py-3 bg-brand-600 text-white
+                   rounded-full shadow-lg text-sm font-semibold"
+      >
+        <Map className="w-4 h-4" />
+        Map
+      </motion.button>
+
+      {/* Full-screen map overlay — fade in/out */}
+      <AnimatePresence>
+        {showMapOverlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="md:hidden fixed inset-0 z-[1500] flex flex-col bg-white"
+          >
+            <div className="flex-shrink-0 flex items-center gap-3 px-4 h-14 border-b border-gray-100 bg-white">
+              <button onClick={() => setShowMapOverlay(false)} className="p-2 -ml-1 rounded-xl hover:bg-gray-100 transition-colors">
+                <X className="w-5 h-5 text-gray-700" />
+              </button>
+              <span className="font-semibold text-gray-900">Map View</span>
+              <span className="text-xs text-gray-400 ml-auto">{filtered.length} sites</span>
+            </div>
+            <div className="flex-1 min-h-0">
+              <MapContainer center={mapCenter} zoom={10} style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                />
+                <MapFlyTo campsite={selected} />
+                {filtered.map(c => (
+                  <Marker key={c._id} position={[c.location.lat, c.location.lon]} icon={pins[c.siteType]}
+                    eventHandlers={{ click: () => { selectCampsite(c); setShowMapOverlay(false); } }}>
+                    <Popup>
+                      <p className="font-semibold text-sm">{c.name}</p>
+                      <p className="text-xs text-gray-500">{c.parkName}</p>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom sheet — spring physics + drag to dismiss */}
+      <AnimatePresence>
+        {selected && (
+          <>
+            {/* Scrim */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={clearSelection}
+              className="md:hidden fixed inset-0 z-[1100] bg-black/30"
+            />
+
+            {/* Sheet */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={{ top: 0.05, bottom: 0.6 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 120 || info.velocity.y > 300) clearSelection();
+              }}
+              className="md:hidden fixed inset-x-0 bottom-0 z-[1200] bg-white rounded-t-3xl shadow-2xl max-h-[78vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex-shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
+                <div className="w-10 h-1 rounded-full bg-gray-300" />
+              </div>
+              <CampsiteDetail
+                campsite={selected}
+                onClose={clearSelection}
+                onPlan={() => handlePlan(selected)}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </Layout>
   );
 }

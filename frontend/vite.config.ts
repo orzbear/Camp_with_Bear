@@ -6,16 +6,10 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Intercept any request starting with /api
       '/api': {
-        // Change 'localhost' to 'api' if running inside Docker Compose
-        target: 'http://api:8080',
+        target: 'http://localhost:8080',
         changeOrigin: true,
-        // Optional: Remove '/api' before sending to the backend 
-        // if your backend DOES NOT expect the /api prefix
-        // rewrite: (path) => path.replace(/^\/api/, '') 
       }
     }
   }
 })
-

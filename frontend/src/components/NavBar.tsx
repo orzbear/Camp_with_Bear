@@ -1,110 +1,96 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../auth/AuthContext';
+import { LogOut, User } from 'lucide-react';
 import { Logo } from './Logo';
+
+const navLinks = [
+  { path: '/explore',    label: 'Explore'    },
+  { path: '/plan',       label: 'Plan'       },
+  { path: '/footprints', label: 'Footprints' },
+  { path: '/recipes',    label: 'Recipes'    },
+];
 
 export function NavBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const handleLogout = () => {
     logout();
-    navigate('/footprints');
+    navigate('/explore');
   };
 
   return (
-    // Removed 'py-4' from here to have tighter control over height if needed, 
-    // or keep it for a taller bar. I reduced it to py-2 for a cleaner look with the large logo.
-    <nav className="bg-white shadow-md border-b border-gray-200 py-6">
-      {/* CHANGED: 
-          1. Removed 'max-w-7xl' (which constrained width)
-          2. Removed 'mx-auto' (which centered it)
-          3. Added 'w-full' (to span full width)
-      */}
+    <nav className="flex-shrink-0 bg-white border-b border-gray-100 sticky top-0 z-40 shadow-sm">
       <div className="w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Left: Logo */}
-          {/* Removed 'py-4' wrapper to allow logo to be full height */}
-          <div className="flex-shrink-0 flex items-center">
-            <Logo />
+        <div className="flex items-center justify-between h-16">
+
+          <Logo />
+
+          {/* Desktop nav links */}
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map(({ path, label }) => {
+              const active = pathname === path || (path === '/explore' && pathname === '/');
+              return (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`relative px-3 py-2 text-sm font-medium transition-colors ${
+                    active ? 'text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {/* Sliding pill behind active link */}
+                  {active && (
+                    <motion.div
+                      layoutId="nav-pill"
+                      className="absolute inset-0 bg-gray-100 rounded-lg"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10">{label}</span>
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Middle: Navigation links */}
-          <div className="hidden md:flex space-x-8">
-            <Link
-              to="/footprints"
-              className="text-gray-700 hover:text-green-700 px-3 py-2 rounded-md text-xl font-medium transition-colors"
-            >
-              Footprints
-            </Link>
-            <Link
-              to="/plan"
-              className="text-gray-700 hover:text-green-700 px-3 py-2 rounded-md text-xl font-medium transition-colors"
-            >
-              Plan
-            </Link>
-            <Link
-              to="/recipes"
-              className="text-gray-700 hover:text-green-700 px-3 py-2 rounded-md text-xl font-medium transition-colors"
-            >
-              Recipes
-            </Link>
-          </div>
-
-          {/* Right: Auth buttons or user info */}
-          <div className="flex items-center space-x-4">
+          {/* Auth section */}
+          <div className="flex items-center gap-2">
             {user ? (
               <>
-                <span className="text-lg text-gray-600">
-                  Hi, <span className="font-medium">{user.email}</span>
+                <span className="hidden sm:flex items-center gap-1.5 text-gray-500 text-sm">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="max-w-[140px] truncate">{user.email}</span>
                 </span>
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
                   onClick={handleLogout}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md text-lg font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
-                  Logout
-                </button>
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </motion.button>
               </>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-green-700 px-3 py-2 rounded-md text-lg font-medium transition-colors"
+                  className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   Login
                 </Link>
-                <Link
-                  to="/register"
-                  className="bg-green-600 text-white px-4 py-2 rounded-md text-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                >
-                  Register
-                </Link>
+                <motion.div whileTap={{ scale: 0.96 }}>
+                  <Link
+                    to="/register"
+                    className="px-4 py-1.5 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors"
+                  >
+                    Register
+                  </Link>
+                </motion.div>
               </>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Mobile menu */}
-      <div className="md:hidden border-t border-gray-200">
-        <div className="px-2 pt-2 pb-3 space-y-1">
-          <Link
-            to="/footprints"
-            className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-gray-50"
-          >
-            Footprints
-          </Link>
-          <Link
-            to="/plan"
-            className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-gray-50"
-          >
-            Plan
-          </Link>
-          <Link
-            to="/recipes"
-            className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-700 hover:bg-gray-50"
-          >
-            Recipes
-          </Link>
         </div>
       </div>
     </nav>
