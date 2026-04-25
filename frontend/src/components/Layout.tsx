@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { NavBar } from './NavBar';
+import { BottomTabBar } from './BottomTabBar';
 
 interface LayoutProps {
   children: ReactNode;
@@ -7,10 +8,12 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50">
       <NavBar />
-      <main>{children}</main>
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        {children}
+      </main>
+      <BottomTabBar />
     </div>
   );
 }
-

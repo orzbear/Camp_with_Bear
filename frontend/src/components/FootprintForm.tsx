@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import { LatLngExpression } from 'leaflet';
+import { motion } from 'framer-motion';
 import type { Footprint, CreateFootprintRequest, UpdateFootprintRequest, GeocodeResult } from '../api/client';
 import { geocode } from '../api/client';
 
@@ -205,19 +206,33 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
     : [-33.8688, 151.2093]; // Sydney default
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {footprint ? 'Edit Footprint' : 'Add New Footprint'}
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="font-display font-bold text-xl text-gray-900">
+              {footprint ? 'Edit Footprint' : 'Add Footprint'}
             </h2>
             <button
               onClick={onCancel}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors text-lg leading-none"
               disabled={isSubmitting}
             >
-              ×
+              ✕
             </button>
           </div>
 
@@ -230,7 +245,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
                   errors.title ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="e.g., Blue Mountains Adventure"
@@ -260,7 +275,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                       setShowSuggestions(true);
                     }
                   }}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
                     errors.location ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Search campsite or place (e.g. Royal National Park)"
@@ -268,7 +283,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                 />
                 {isSearching && (
                   <div className="absolute right-3 top-2.5">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-gray-900"></div>
                   </div>
                 )}
               </div>
@@ -280,7 +295,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                       key={index}
                       type="button"
                       onClick={() => handleSelectLocation(result)}
-                      className="w-full text-left px-4 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
                     >
                       <div className="font-medium text-gray-900">{result.name}</div>
                       <div className="text-xs text-gray-500">
@@ -292,7 +307,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
               )}
 
               {selectedLocationName && (
-                <p className="text-xs text-green-600 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   Selected: {selectedLocationName}
                 </p>
               )}
@@ -305,7 +320,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Map Preview
               </label>
-              <div className="border border-gray-300 rounded-md overflow-hidden" style={{ height: '250px' }}>
+              <div className="border border-gray-200 rounded-xl overflow-hidden" style={{ height: '250px' }}>
                 <MapContainer
                   center={mapCenter}
                   zoom={lat !== null && lon !== null ? 13 : 8}
@@ -339,7 +354,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                   type="datetime-local"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
                     errors.startDate ? 'border-red-500' : 'border-gray-300'
                   }`}
                   disabled={isSubmitting}
@@ -355,7 +370,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                   type="datetime-local"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
                     errors.endDate ? 'border-red-500' : 'border-gray-300'
                   }`}
                   disabled={isSubmitting}
@@ -370,7 +385,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                 placeholder="Add any notes about your camping experience..."
                 disabled={isSubmitting}
               />
@@ -381,7 +396,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
               <select
                 value={rating}
                 onChange={(e) => setRating(e.target.value === '' ? '' : Number(e.target.value))}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 ${
                   errors.rating ? 'border-red-500' : 'border-gray-300'
                 }`}
                 disabled={isSubmitting}
@@ -402,7 +417,7 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                 placeholder="hiking, scenic, family-friendly (comma-separated)"
                 disabled={isSubmitting}
               />
@@ -413,22 +428,22 @@ export function FootprintForm({ footprint, onSave, onCancel, isSubmitting = fals
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                className="px-5 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors disabled:opacity-50"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Saving...' : footprint ? 'Update' : 'Create'}
+                {isSubmitting ? 'Saving…' : footprint ? 'Update' : 'Create'}
               </button>
             </div>
           </form>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
